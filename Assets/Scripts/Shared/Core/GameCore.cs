@@ -37,98 +37,75 @@ public class GameCore
         get { return players[currentTurnIndex].PlayerId; }
     }
 
+    //윷 던지기
     public RollResult Roll(string playerId)
     {
-        if(currentState != GameState.WaitingForThrow)
-        {
-            return new RollResult
-            {
-                IsValid = false,
-                Error = RollError.InvalidGameState
-            };
-        }
-
-        // 테스트 위해 주석 처리
-        //if (players[currentTurnIndex].PlayerId != playerId)
-        //{
-        //    return new RollResult
-        //    {
-        //        IsValid = false,
-        //        Error = RollError.NotYourTurn
-        //    };
-        //}
+        var validation = ValidateRoll(playerId);
+        if (!validation.IsSuccess)
+            return validation;
 
         var result = yutSystem.Roll();
         currentStep = (int) result;
 
-        if(currentStep <= 0 && currentStep >= 6)
-        {
-            return new RollResult
-            {
-                IsValid = false,
-                Error = RollError.InvalidStep
-            };
-        }
+        if (currentStep <= 0 || currentStep >= 6)
+            return RollResult.Fail(RollError.InvalidStep);
 
         //이후 모, 윷이 나올 경우 결과 저장 및 따로 분기 필요
         currentState = GameState.WaitingForSelect;
 
-        return new RollResult
-        {
-            IsValid = true,
-            ResultStep = currentStep,
-            Error = RollError.None
-        };
+        return RollResult.Success(currentStep, extraTurn: false);
     }
 
+    // Roll 검증
+    private RollResult ValidateRoll(string playerId)
+    {
+        if (currentState != GameState.WaitingForThrow)
+            return RollResult.Fail(RollError.InvalidGameState);
+
+        // 테스트 위해 주석 처리
+        //if (players[currentTurnIndex].PlayerId != playerId)
+        //    return RollResult.Invalid(RollError.NotYourTurn);
+
+        return RollResult.Success(0, extraTurn: false);
+    }
+
+
+    // 말 이동
     public MoveResult Move(string tokenId)
     {
-        if (currentState != GameState.WaitingForSelect)
-        {
-            return new MoveResult
-            {
-                IsValid = false,
-                Error = MoveError.InvalidGameState
-            };
-        }
-
-        Token token = tokens.Find(t => t.TokenId == tokenId);
-
-        if (token == null)
-            return new MoveResult
-            {
-                IsValid = false,
-                Error = MoveError.InvalidToken
-            };
-
-        if (token.PlayerId != players[currentTurnIndex].PlayerId)
-            return new MoveResult
-            {
-                IsValid = false,
-                Error = MoveError.NotYourToken
-            };
+        var (validation, token) = ValidateMove(tokenId);
+        if (validation != null) return validation;
 
         Tile destination = board.MoveToken(token, currentStep);
-
         bool captured = ruleEngine.ResolveCapture(token, destination, players);
 
-        if (!captured)
-        {
-            currentTurnIndex = (currentTurnIndex + 1) % players.Count;
-        }
+        int nextTurnIndex = captured ? currentTurnIndex : (currentTurnIndex + 1) % players.Count;
+        currentTurnIndex = nextTurnIndex;
 
         currentState = GameState.WaitingForThrow;
 
-        return new MoveResult
-            {
-                IsValid = true,
-                TokenId = token.TokenId,
-                NewIndex = token.CurrentTileIndex,
-                CurrentTurnPlayerId = players[currentTurnIndex].PlayerId,
-                Captured = captured,
-                Error = MoveError.None
-            };
+        return MoveResult.Success(
+            token.TokenId,
+            token.CurrentTileIndex,
+            players[currentTurnIndex].PlayerId,
+            captured
+        );
     }
 
+    // Move 검증
+    private (MoveResult Validation, Token Token) ValidateMove(string tokenId)
+    {
+        if (currentState != GameState.WaitingForSelect)
+            return (MoveResult.Fail(MoveError.InvalidGameState), null);
+
+        Token token = tokens.Find(t => t.TokenId == tokenId);
+        if (token == null)
+            return (MoveResult.Fail(MoveError.InvalidToken), null);
+
+        if (token.PlayerId != players[currentTurnIndex].PlayerId)
+            return (MoveResult.Fail(MoveError.NotYourToken), null);
+
+        return (null, token);
+    }
 
 }

@@ -69,7 +69,7 @@ public class GameManager : MonoBehaviour
     public void OnClickThrowButton()
     {
         RollResult rollResult = gameCore.Roll(localPlayerId);
-        if (!rollResult.IsValid)
+        if (!rollResult.IsSuccess)
         {
             Debug.Log($"{rollResult.Error}");
             return;
@@ -84,7 +84,7 @@ public class GameManager : MonoBehaviour
     {
         MoveResult moveResult = gameCore.Move(tokenId);
 
-        if (!moveResult.IsValid)
+        if (!moveResult.IsSuccess)
         {
             Debug.Log($"{moveResult.Error}");
             return;
