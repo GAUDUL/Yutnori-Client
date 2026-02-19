@@ -1,4 +1,4 @@
-using UnityEngine;
+using System;
 public class YutSystem
 {
     public enum YutResult
@@ -10,9 +10,10 @@ public class YutSystem
         Mo = 5
     }
 
+    private static readonly Random rng = new Random();
     public YutResult Roll()
     {
-        int rand = Random.Range(0, 16);
+        int rand = rng.Next(0, 16);
         if (rand < 4)
             return YutResult.Do;
         else if (rand < 10)

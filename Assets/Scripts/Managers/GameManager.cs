@@ -13,7 +13,7 @@ public class GameManager : MonoBehaviour
 
     private const int BOARD_SIZE = 20;
 
-    private List<Player> players = new List<Player>();
+    private Dictionary<string, Player> playersById;
     private List<Token> tokens = new List<Token>();
     private Dictionary<string, TokenView> tokenViews = new Dictionary<string, TokenView>();
 
@@ -40,13 +40,16 @@ public class GameManager : MonoBehaviour
         var player1 = new Player("P1");
         var player2 = new Player("P2");
 
-        players.Add(player1);
-        players.Add(player2);
+        playersById = new Dictionary<string, Player>
+        {
+            { player1.PlayerId, player1 },
+            { player2.PlayerId, player2 }
+        };
 
         CreateToken(player1, "T1");
         CreateToken(player2, "T2");
 
-        gameCore = new GameCore(BOARD_SIZE, players, tokens);
+        gameCore = new GameCore(BOARD_SIZE, playersById, tokens);
 
     }
 

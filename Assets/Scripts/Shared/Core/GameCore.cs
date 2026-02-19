@@ -12,21 +12,26 @@ public class GameCore
     private RuleEngine ruleEngine;
     private YutSystem yutSystem;
 
-    private List<Player> players;
+    private Dictionary<string, Player> playersById;
+    private List<string> playerOrder;
     private List<Token> tokens;
 
     private GameState currentState;
     private int currentTurnIndex;
     private int currentStep;
 
-    public GameCore(int boardSize, List<Player> players, List<Token> tokens)
+    public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
     {
         board = new Board(boardSize);
         ruleEngine = new RuleEngine();
         yutSystem = new YutSystem();
-        this.players = players;
+
+        this.playersById = playersById;
         this.tokens = tokens;
         currentState = GameState.WaitingForThrow;
+
+        playerOrder = new List<string>(playersById.Keys);
+        currentTurnIndex = 0;
 
         foreach (var token in tokens)
             board.PlaceAtStart(token);
@@ -34,7 +39,7 @@ public class GameCore
 
     public string CurrentTurnPlayerId
     {
-        get { return players[currentTurnIndex].PlayerId; }
+        get { return playerOrder[currentTurnIndex]; }
     }
 
     //À· ´øÁö±â
@@ -77,9 +82,10 @@ public class GameCore
         if (validation != null) return validation;
 
         Tile destination = board.MoveToken(token, currentStep);
-        bool captured = ruleEngine.ResolveCapture(token, destination, players);
 
-        int nextTurnIndex = captured ? currentTurnIndex : (currentTurnIndex + 1) % players.Count;
+        bool captured = ruleEngine.ResolveCapture(token, destination, playersById);
+
+        int nextTurnIndex = captured ? currentTurnIndex : (currentTurnIndex + 1) % playerOrder.Count;
         currentTurnIndex = nextTurnIndex;
 
         currentState = GameState.WaitingForThrow;
@@ -87,7 +93,7 @@ public class GameCore
         return MoveResult.Success(
             token.TokenId,
             token.CurrentTileIndex,
-            players[currentTurnIndex].PlayerId,
+            CurrentTurnPlayerId,
             captured
         );
     }
@@ -102,7 +108,7 @@ public class GameCore
         if (token == null)
             return (MoveResult.Fail(MoveError.InvalidToken), null);
 
-        if (token.PlayerId != players[currentTurnIndex].PlayerId)
+        if (token.PlayerId != CurrentTurnPlayerId)
             return (MoveResult.Fail(MoveError.NotYourToken), null);
 
         return (null, token);
