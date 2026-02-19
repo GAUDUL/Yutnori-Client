@@ -19,6 +19,7 @@ public class GameCore
     private GameState currentState;
     private int currentTurnIndex;
     private int currentStep;
+    private bool hasExtraTurn;
 
     public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
     {
@@ -55,10 +56,16 @@ public class GameCore
         if (currentStep <= 0 || currentStep >= 6)
             return RollResult.Fail(RollError.InvalidStep);
 
-        //이후 모, 윷이 나올 경우 결과 저장 및 따로 분기 필요
+        // '윷' or '모' 일 경우 추가 턴
+        bool extraTurn =
+            result == YutSystem.YutResult.Yut ||
+            result == YutSystem.YutResult.Mo;
+
+        hasExtraTurn = extraTurn;
+
         currentState = GameState.WaitingForSelect;
 
-        return RollResult.Success(currentStep, extraTurn: false);
+        return RollResult.Success(currentStep, extraTurn);
     }
 
     // Roll 검증
@@ -67,8 +74,9 @@ public class GameCore
         if (currentState != GameState.WaitingForThrow)
             return RollResult.Fail(RollError.InvalidGameState);
 
+        // 현재 턴 플레이어Id가 맞는지 확인
         // 테스트 위해 주석 처리
-        //if (players[currentTurnIndex].PlayerId != playerId)
+        //if (CurrentTurnPlayerId != playerId)
         //    return RollResult.Invalid(RollError.NotYourTurn);
 
         return RollResult.Success(0, extraTurn: false);
@@ -85,7 +93,11 @@ public class GameCore
 
         bool captured = ruleEngine.ResolveCapture(token, destination, playersById);
 
-        int nextTurnIndex = captured ? currentTurnIndex : (currentTurnIndex + 1) % playerOrder.Count;
+        // 잡기 성공 or 던지기 결과 윷 or 모 => 추가 턴 부여
+        // 이후 세부 룰 확정 시 수정 가능성 O
+        bool giveExtraTurn = captured || hasExtraTurn;
+
+        int nextTurnIndex = giveExtraTurn ? currentTurnIndex : (currentTurnIndex + 1) % playerOrder.Count;
         currentTurnIndex = nextTurnIndex;
 
         currentState = GameState.WaitingForThrow;
