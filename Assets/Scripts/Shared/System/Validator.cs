@@ -1,0 +1,43 @@
+using System.Collections.Generic;
+
+public class MoveValidator
+{
+    private List<Token> tokens;
+
+    public MoveValidator(List<Token> tokens)
+    {
+        this.tokens = tokens;
+    }
+
+    public (MoveResult Validation, Token Token) Validate(string tokenId, string currentPlayerId, Queue<int> pendingSteps, bool isMovePhase)
+    {
+        if (!isMovePhase)
+            return (MoveResult.Fail(MoveError.InvalidGameState), null);
+
+        if (pendingSteps.Count == 0)
+            return (MoveResult.Fail(MoveError.NoStep), null);
+
+        Token token = tokens.Find(t => t.TokenId == tokenId);
+        if (token == null)
+            return (MoveResult.Fail(MoveError.InvalidToken), null);
+
+        if (token.PlayerId != currentPlayerId)
+            return (MoveResult.Fail(MoveError.NotYourToken), null);
+
+        return (null, token);
+    }
+}
+
+public class RollValidator
+{
+    public RollResult Validate(bool isRollPhase, int remainingRolls)
+    {
+        if (!isRollPhase)
+            return RollResult.Fail(RollError.InvalidGameState);
+
+        if (remainingRolls <= 0)
+            return RollResult.Fail(RollError.NoRemiaingRoll);
+
+        return RollResult.Success(0, false);
+    }
+}

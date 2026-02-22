@@ -40,6 +40,7 @@ public class GameManager : MonoBehaviour
     {
         playersById = new Dictionary<string, Player>();
 
+        //플레이어 생성
         for (int i = 1; i <= playerCount; i++)
         {
             string playerId = $"P{i}";
@@ -115,6 +116,11 @@ public class GameManager : MonoBehaviour
         if (moveResult.IsRoundEnd)
         {
             Debug.Log("[Test] 라운드 종료");
+
+            foreach (var player in playersById.Values)
+            {
+                Debug.Log($"남은 코인: {player.PlayerId} = {player.Coin}");
+            }
 
             // 미니게임 이동
         }

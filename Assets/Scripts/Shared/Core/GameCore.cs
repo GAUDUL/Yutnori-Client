@@ -11,49 +11,41 @@ public class GameCore
     private Board board;
     private RuleEngine ruleEngine;
     private YutSystem yutSystem;
+    private TurnManager turnManager;
 
     private Dictionary<string, Player> playersById;
-    private List<string> playerOrder;
     private List<Token> tokens;
 
+    private MoveValidator moveValidator;
+    private RollValidator rollValidator;
+
+    private Queue<int> pendingSteps = new Queue<int>(); // 윷 던지기 결과 저장
     private GameState currentState;
-    private int currentTurnIndex;
-
-    //private int turnSequence = 0;
-    //private int roundSequence = 0;
-
-    private Queue<int> pendingSteps = new Queue<int>(); // 윷 결과 저장
-    private int remainingRollCount = 1; // Roll 가능 횟수
-
-    private bool usedYutExtraTurnThisTurn; //윷 or 모로 얻은 추가 턴
-    private bool usedCaptureExtraTurnThisTurn; // 잡기로 얻은 추가 턴
 
     public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
     {
         board = new Board(boardSize);
         ruleEngine = new RuleEngine();
         yutSystem = new YutSystem();
+        turnManager = new TurnManager(new List<string>(playersById.Keys));
+        moveValidator = new MoveValidator(tokens);
+        rollValidator = new RollValidator();
 
         this.playersById = playersById;
         this.tokens = tokens;
-        currentState = GameState.WaitingForThrow;
-
-        playerOrder = new List<string>(playersById.Keys);
-        currentTurnIndex = 0;
 
         foreach (var token in tokens)
             board.PlaceAtStart(token);
+
+        currentState = GameState.WaitingForThrow;
     }
 
-    public string CurrentTurnPlayerId
-    {
-        get { return playerOrder[currentTurnIndex]; }
-    }
+    public string CurrentTurnPlayerId => turnManager.CurrentPlayerId;
 
-    //윷 던지기
+    // 윷 던지기
     public RollResult Roll(string playerId)
     {
-        var validation = ValidateRoll(playerId);
+        var validation = rollValidator.Validate(currentState == GameState.WaitingForThrow, turnManager.RemainingRolls);
         if (!validation.IsSuccess)
             return validation;
 
@@ -63,129 +55,51 @@ public class GameCore
         if (step < -1 || step >= 6)
             return RollResult.Fail(RollError.InvalidStep);
 
-        remainingRollCount--;
+        turnManager.UseRoll();
         pendingSteps.Enqueue(step);
 
-        bool isYutOrMo =
-            result == YutSystem.YutResult.Yut ||
-            result == YutSystem.YutResult.Mo;
+        // 윷 or 모 확인
+        if (yutSystem.IsExtraTurn(result))
+            turnManager.GrantExtraTurnYut();
 
-        // 결과 윷 or 모 & 윷, 모로 얻은 추가 턴 기록 x 일 경우
-        // 추가 턴 제공
-        if (isYutOrMo && !usedYutExtraTurnThisTurn)
-        {
-            remainingRollCount++;
-            usedYutExtraTurnThisTurn = true;
-        }
+        // 던지기 기회 남아있을 경우 Roll 대기 상태
+        currentState = (turnManager.RemainingRolls > 0) ? GameState.WaitingForThrow : GameState.WaitingForSelect;
 
-        if (remainingRollCount > 0)
-        {
-            currentState = GameState.WaitingForThrow;
-        }
-        else
-        {
-            currentState = GameState.WaitingForSelect;
-        }
-
-        return RollResult.Success(step, remainingRollCount > 0);
+        return RollResult.Success(step, turnManager.RemainingRolls > 0);
     }
-
-    // Roll 검증
-    private RollResult ValidateRoll(string playerId)
-    {
-        if (currentState != GameState.WaitingForThrow)
-            return RollResult.Fail(RollError.InvalidGameState);
-
-        if (remainingRollCount <= 0)
-            return RollResult.Fail(RollError.NoRemiaingRoll);
-
-        // 현재 턴 플레이어Id가 맞는지 확인
-        // 테스트 위해 주석 처리
-        //if (CurrentTurnPlayerId != playerId)
-        //    return RollResult.Invalid(RollError.NotYourTurn);
-
-        return RollResult.Success(0, extraTurn: false);
-    }
-
 
     // 말 이동
     public MoveResult Move(string tokenId)
     {
-        var (validation, token) = ValidateMove(tokenId);
-        if (validation != null) return validation;
+        var (validation, token) = moveValidator.Validate(tokenId, CurrentTurnPlayerId, pendingSteps, currentState == GameState.WaitingForSelect);
+        if (validation != null)
+            return validation;
 
-        // 이동
         int step = pendingSteps.Dequeue();
         Tile destination = board.MoveToken(token, step);
 
         bool captured = ruleEngine.ResolveCapture(token, destination, playersById);
         bool isRoundEnd = false;
 
-        if (captured && !usedCaptureExtraTurnThisTurn)
+        // 잡으면 추가 턴
+        if (captured && !turnManager.UsedCaptureExtraTurn)
         {
-            remainingRollCount++;
-            usedCaptureExtraTurnThisTurn = true;
+            turnManager.GrantExtraTurnCapture();
             currentState = GameState.WaitingForThrow;
-
-            return MoveResult.Success(
-                token.TokenId,
-                token.CurrentTileIndex,
-                CurrentTurnPlayerId,
-                captured,
-                isRoundEnd
-            );
+            return MoveResult.Success(token.TokenId, token.CurrentTileIndex, CurrentTurnPlayerId, captured, isRoundEnd);
         }
 
+        // 이동 횟수 남아있을 경우 이동 대기
         if (pendingSteps.Count > 0)
         {
             currentState = GameState.WaitingForSelect;
         }
         else
         {
-            isRoundEnd = EndTurn();
+            isRoundEnd = turnManager.EndTurn();
             currentState = GameState.WaitingForThrow;
         }
 
-        return MoveResult.Success(
-            token.TokenId,
-            token.CurrentTileIndex,
-            CurrentTurnPlayerId,
-            captured,
-            isRoundEnd
-        );
+        return MoveResult.Success(token.TokenId, token.CurrentTileIndex, CurrentTurnPlayerId, captured, isRoundEnd);
     }
-
-    // Move 검증
-    private (MoveResult Validation, Token Token) ValidateMove(string tokenId)
-    {
-        if (pendingSteps.Count == 0)
-            return (MoveResult.Fail(MoveError.NoStep), null);
-
-        if (currentState != GameState.WaitingForSelect)
-            return (MoveResult.Fail(MoveError.InvalidGameState), null);
-
-        Token token = tokens.Find(t => t.TokenId == tokenId);
-        if (token == null)
-            return (MoveResult.Fail(MoveError.InvalidToken), null);
-
-        if (token.PlayerId != CurrentTurnPlayerId)
-            return (MoveResult.Fail(MoveError.NotYourToken), null);
-
-        return (null, token);
-    }
-
-    private bool EndTurn()
-    {
-        int nextTurnIndex = (currentTurnIndex + 1) % playerOrder.Count;
-        bool isRoundEnd = nextTurnIndex == 0;
-
-        currentTurnIndex = nextTurnIndex;
-
-        remainingRollCount = 1;
-        usedYutExtraTurnThisTurn = false;
-        usedCaptureExtraTurnThisTurn = false;
-
-        return isRoundEnd;
-    }
-
 }

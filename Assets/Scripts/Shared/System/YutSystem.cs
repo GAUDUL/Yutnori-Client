@@ -28,4 +28,10 @@ public class YutSystem
         else
             return YutResult.Mo;
     }
+
+    // À· or ¸ð È®ÀÎ
+    public bool IsExtraTurn(YutResult result)
+    {
+        return result == YutResult.Yut || result == YutResult.Mo;
+    }
 }
