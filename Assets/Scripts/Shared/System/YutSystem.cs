@@ -3,6 +3,7 @@ public class YutSystem
 {
     public enum YutResult
     {
+        BackDo = -1,
         Do = 1,
         Gae = 2,
         Geol = 3,
@@ -14,7 +15,9 @@ public class YutSystem
     public YutResult Roll()
     {
         int rand = rng.Next(0, 16);
-        if (rand < 4)
+        if (rand < 1)
+            return YutResult.BackDo;
+        else if (rand < 4)
             return YutResult.Do;
         else if (rand < 10)
             return YutResult.Gae;

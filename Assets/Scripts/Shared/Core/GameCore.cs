@@ -53,7 +53,7 @@ public class GameCore
         var result = yutSystem.Roll();
         currentStep = (int) result;
 
-        if (currentStep <= 0 || currentStep >= 6)
+        if (currentStep < -1 || currentStep >= 6)
             return RollResult.Fail(RollError.InvalidStep);
 
         // '윷' or '모' 일 경우 추가 턴

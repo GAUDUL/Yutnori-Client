@@ -18,7 +18,7 @@ public class Board
         int current = token.CurrentTileIndex;
         int tileCount = tiles.Length;
 
-        int destination = (current + step) % tileCount;
+        int destination = ((current + step) % tileCount + tileCount) % tileCount;
 
         tiles[current].tokens.Remove(token);
         tiles[destination].tokens.Add(token);
