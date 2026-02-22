@@ -20,6 +20,8 @@ public class GameManager : MonoBehaviour
     private Player localPlayer;
     private string localPlayerId = "P1";
 
+    public bool IsRoundEnd;
+
 
     private void Awake()
     {
@@ -107,6 +109,13 @@ public class GameManager : MonoBehaviour
         {
             //추가 턴
             Debug.Log($"[Test] {moveResult.TokenId} 잡기 성공, {currentTurnPlayerId} 추가 턴 부여");
+        }
+
+        if (moveResult.IsRoundEnd)
+        {
+            Debug.Log("[Test] 라운드 종료");
+
+            // 미니게임 이동
         }
 
     }

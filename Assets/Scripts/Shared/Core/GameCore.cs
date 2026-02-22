@@ -18,8 +18,15 @@ public class GameCore
 
     private GameState currentState;
     private int currentTurnIndex;
+
+    private int turnSequence = 0;
+    private int roundSequence = 0;
+
     private int currentStep;
-    private bool hasExtraTurn;
+    private int extraTurnCount; //추가 턴 관리
+
+    private bool usedYutExtraTurnThisTurn; //윷 or 모로 얻은 추가 턴
+    private bool usedCaptureExtraTurnThisTurn; // 잡기로 얻은 추가 턴
 
     public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
     {
@@ -56,16 +63,22 @@ public class GameCore
         if (currentStep < -1 || currentStep >= 6)
             return RollResult.Fail(RollError.InvalidStep);
 
-        // '윷' or '모' 일 경우 추가 턴
-        bool extraTurn =
+        bool isYutOrMo =
             result == YutSystem.YutResult.Yut ||
             result == YutSystem.YutResult.Mo;
 
-        hasExtraTurn = extraTurn;
+        // 결과 윷 or 모 & 윷, 모로 얻은 추가 턴 기록 x 일 경우
+        // 추가 턴 제공
+        if (isYutOrMo && !usedYutExtraTurnThisTurn)
+        {
+            extraTurnCount++;
+            usedYutExtraTurnThisTurn = true;
+        }
 
+        bool hasExtraTurn = extraTurnCount > 0 ? true : false;
         currentState = GameState.WaitingForSelect;
 
-        return RollResult.Success(currentStep, extraTurn);
+        return RollResult.Success(currentStep, hasExtraTurn);
     }
 
     // Roll 검증
@@ -93,12 +106,14 @@ public class GameCore
 
         bool captured = ruleEngine.ResolveCapture(token, destination, playersById);
 
-        // 잡기 성공 or 던지기 결과 윷 or 모 => 추가 턴 부여
-        // 이후 세부 룰 확정 시 수정 가능성 O
-        bool giveExtraTurn = captured || hasExtraTurn;
 
-        int nextTurnIndex = giveExtraTurn ? currentTurnIndex : (currentTurnIndex + 1) % playerOrder.Count;
-        currentTurnIndex = nextTurnIndex;
+        if (captured && !usedCaptureExtraTurnThisTurn)
+        {
+            extraTurnCount++;
+            usedCaptureExtraTurnThisTurn = true;
+        }
+
+        bool isRoundEnd = EndTurn();
 
         currentState = GameState.WaitingForThrow;
 
@@ -106,7 +121,8 @@ public class GameCore
             token.TokenId,
             token.CurrentTileIndex,
             CurrentTurnPlayerId,
-            captured
+            captured,
+            isRoundEnd
         );
     }
 
@@ -124,6 +140,25 @@ public class GameCore
             return (MoveResult.Fail(MoveError.NotYourToken), null);
 
         return (null, token);
+    }
+
+    private bool EndTurn()
+    {
+        if (extraTurnCount > 0)
+        {
+            extraTurnCount--;
+            return false;
+        }
+
+        int nextTurnIndex = (currentTurnIndex + 1) % playerOrder.Count;
+        bool isRoundEnd = nextTurnIndex == 0;
+
+        currentTurnIndex = nextTurnIndex;
+
+        usedYutExtraTurnThisTurn = false;
+        usedCaptureExtraTurnThisTurn = false;
+
+        return isRoundEnd;
     }
 
 }
