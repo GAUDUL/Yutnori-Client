@@ -4,8 +4,8 @@ public class GameCore
 {
     private enum GameState
     {
-        WaitingForThrow,   // 윷 던지기 대기
-        WaitingForSelect   // 말 선택 대기
+        WaitingForThrow,   // Roll 가능
+        WaitingForSelect   // Move 가능
     }
 
     private Board board;
@@ -19,11 +19,11 @@ public class GameCore
     private GameState currentState;
     private int currentTurnIndex;
 
-    private int turnSequence = 0;
-    private int roundSequence = 0;
+    //private int turnSequence = 0;
+    //private int roundSequence = 0;
 
-    private int currentStep;
-    private int extraTurnCount; //추가 턴 관리
+    private Queue<int> pendingSteps = new Queue<int>(); // 윷 결과 저장
+    private int remainingRollCount = 1; // Roll 가능 횟수
 
     private bool usedYutExtraTurnThisTurn; //윷 or 모로 얻은 추가 턴
     private bool usedCaptureExtraTurnThisTurn; // 잡기로 얻은 추가 턴
@@ -58,10 +58,13 @@ public class GameCore
             return validation;
 
         var result = yutSystem.Roll();
-        currentStep = (int) result;
+        int step = (int)result;
 
-        if (currentStep < -1 || currentStep >= 6)
+        if (step < -1 || step >= 6)
             return RollResult.Fail(RollError.InvalidStep);
+
+        remainingRollCount--;
+        pendingSteps.Enqueue(step);
 
         bool isYutOrMo =
             result == YutSystem.YutResult.Yut ||
@@ -71,14 +74,20 @@ public class GameCore
         // 추가 턴 제공
         if (isYutOrMo && !usedYutExtraTurnThisTurn)
         {
-            extraTurnCount++;
+            remainingRollCount++;
             usedYutExtraTurnThisTurn = true;
         }
 
-        bool hasExtraTurn = extraTurnCount > 0 ? true : false;
-        currentState = GameState.WaitingForSelect;
+        if (remainingRollCount > 0)
+        {
+            currentState = GameState.WaitingForThrow;
+        }
+        else
+        {
+            currentState = GameState.WaitingForSelect;
+        }
 
-        return RollResult.Success(currentStep, hasExtraTurn);
+        return RollResult.Success(step, remainingRollCount > 0);
     }
 
     // Roll 검증
@@ -86,6 +95,9 @@ public class GameCore
     {
         if (currentState != GameState.WaitingForThrow)
             return RollResult.Fail(RollError.InvalidGameState);
+
+        if (remainingRollCount <= 0)
+            return RollResult.Fail(RollError.NoRemiaingRoll);
 
         // 현재 턴 플레이어Id가 맞는지 확인
         // 테스트 위해 주석 처리
@@ -102,20 +114,37 @@ public class GameCore
         var (validation, token) = ValidateMove(tokenId);
         if (validation != null) return validation;
 
-        Tile destination = board.MoveToken(token, currentStep);
+        // 이동
+        int step = pendingSteps.Dequeue();
+        Tile destination = board.MoveToken(token, step);
 
         bool captured = ruleEngine.ResolveCapture(token, destination, playersById);
-
+        bool isRoundEnd = false;
 
         if (captured && !usedCaptureExtraTurnThisTurn)
         {
-            extraTurnCount++;
+            remainingRollCount++;
             usedCaptureExtraTurnThisTurn = true;
+            currentState = GameState.WaitingForThrow;
+
+            return MoveResult.Success(
+                token.TokenId,
+                token.CurrentTileIndex,
+                CurrentTurnPlayerId,
+                captured,
+                isRoundEnd
+            );
         }
 
-        bool isRoundEnd = EndTurn();
-
-        currentState = GameState.WaitingForThrow;
+        if (pendingSteps.Count > 0)
+        {
+            currentState = GameState.WaitingForSelect;
+        }
+        else
+        {
+            isRoundEnd = EndTurn();
+            currentState = GameState.WaitingForThrow;
+        }
 
         return MoveResult.Success(
             token.TokenId,
@@ -129,6 +158,9 @@ public class GameCore
     // Move 검증
     private (MoveResult Validation, Token Token) ValidateMove(string tokenId)
     {
+        if (pendingSteps.Count == 0)
+            return (MoveResult.Fail(MoveError.NoStep), null);
+
         if (currentState != GameState.WaitingForSelect)
             return (MoveResult.Fail(MoveError.InvalidGameState), null);
 
@@ -144,17 +176,12 @@ public class GameCore
 
     private bool EndTurn()
     {
-        if (extraTurnCount > 0)
-        {
-            extraTurnCount--;
-            return false;
-        }
-
         int nextTurnIndex = (currentTurnIndex + 1) % playerOrder.Count;
         bool isRoundEnd = nextTurnIndex == 0;
 
         currentTurnIndex = nextTurnIndex;
 
+        remainingRollCount = 1;
         usedYutExtraTurnThisTurn = false;
         usedCaptureExtraTurnThisTurn = false;
 

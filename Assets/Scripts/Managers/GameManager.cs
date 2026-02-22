@@ -30,27 +30,28 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        InitializeGame();
+        //테스트 용 플레이어 수
+        int testPlayerCount = 2;
+        InitializeGame(testPlayerCount);
     }
 
     // 게임 초기화
-    private void InitializeGame()
+    private void InitializeGame(int playerCount)
     {
-        //테스트용 P1, P2
-        var player1 = new Player("P1");
-        var player2 = new Player("P2");
+        playersById = new Dictionary<string, Player>();
 
-        playersById = new Dictionary<string, Player>
+        for (int i = 1; i <= playerCount; i++)
         {
-            { player1.PlayerId, player1 },
-            { player2.PlayerId, player2 }
-        };
+            string playerId = $"P{i}";
+            var player = new Player(playerId);
+            playersById.Add(playerId, player);
 
-        CreateToken(player1, "T1");
-        CreateToken(player2, "T2");
+            // 말 2개 생성
+            CreateToken(player, $"{playerId}_T1");
+            CreateToken(player, $"{playerId}_T2");
+        }
 
         gameCore = new GameCore(BOARD_SIZE, playersById, tokens);
-
     }
 
     //말 생성

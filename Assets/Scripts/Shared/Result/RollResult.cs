@@ -2,6 +2,7 @@ public enum RollError
 {
     None,
     NotYourTurn,
+    NoRemiaingRoll,
     InvalidStep,
     InvalidGameState
 }

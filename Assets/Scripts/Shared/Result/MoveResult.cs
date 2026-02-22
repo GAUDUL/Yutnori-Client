@@ -3,6 +3,7 @@ public enum MoveError
     None,
     NotYourTurn,
     NotYourToken,
+    NoStep,
     InvalidToken,
     InvalidStep,
     InvalidGameState
