@@ -7,6 +7,7 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private GameObject tokenPrefab;
     [SerializeField] private BoardView boardView;
+    [SerializeField] private StepSelectionUI stepSelectionUI;
     [SerializeField] private float tokenSpawnHeight = 1.0f;
 
     private const int BOARD_SIZE = 20;
@@ -21,6 +22,9 @@ public class GameManager : MonoBehaviour
     private string localPlayerId = "P1";
 
     public bool IsRoundEnd;
+
+    private string selectedTokenId;
+    private int? selectedStep;
 
 
     private void Awake()
@@ -53,6 +57,9 @@ public class GameManager : MonoBehaviour
         }
 
         gameCore = new GameCore(BOARD_SIZE, playersById, tokens);
+
+        // 초기 UI 상태 동기화
+        RefreshStepUI();
     }
 
     //말 생성
@@ -69,6 +76,17 @@ public class GameManager : MonoBehaviour
         Vector3 basePos = boardView.GetWorldPosition(token.CurrentTileIndex);
         obj.transform.position = basePos + new Vector3(0, tokenSpawnHeight, 0);
     }
+    
+    // UI 동기화
+    private void RefreshStepUI()
+    {
+        var steps = new List<int>(gameCore.GetPendingSteps());
+        bool selectable =
+            gameCore.CanSelectStep &&
+            selectedTokenId != null;
+
+        stepSelectionUI.Show(steps, selectable, OnStepSelected);
+    }
 
     //윷 던지기
     public void OnClickThrowButton()
@@ -81,25 +99,65 @@ public class GameManager : MonoBehaviour
         }
 
         Debug.Log($"[Test] {gameCore.CurrentTurnPlayerId} 윷 던지기 결과: ({rollResult.ResultStep}칸)");
-             
+
+        RefreshStepUI();
     }
 
-    //말 선택 후 이동
+
+    //말 선택 (Token 선택 시 실행)
     public void OnSelectToken(string tokenId)
     {
-        MoveResult moveResult = gameCore.Move(tokenId);
+        bool success = gameCore.SelectToken(tokenId);
 
-        if (!moveResult.IsSuccess)
+        if (!success)
         {
-            Debug.Log($"{moveResult.Error}");
+            Debug.Log("말 선택 불가 상태");
             return;
         }
 
+        selectedTokenId = tokenId;
+
+        RefreshStepUI();
+    }
+
+    // 선택한 말 이동 (Step 선택 시 실행)
+    private void OnStepSelected(int step)
+    {
+        selectedStep = step;
+
+        if (selectedTokenId == null)
+            return;
+
+        MoveResult moveResult = gameCore.Move(selectedStep.Value);
+
+        if (!moveResult.IsSuccess)
+        {
+            Debug.Log(moveResult.Error);
+            return;
+        }
+
+        UpdateTokenView(moveResult);
+        HandleMoveResult(moveResult);
+
+        selectedTokenId = null;
+        selectedStep = null;
+
+        RefreshStepUI();
+    }
+
+    private void UpdateTokenView(MoveResult moveResult)
+    {
         int index = moveResult.NewIndex;
 
-        tokenViews[moveResult.TokenId].transform.position = boardView.GetWorldPosition(index) + new Vector3(0, tokenSpawnHeight, 0);
-        Debug.Log($"[Test] {moveResult.TokenId} 이동 완료/ 현재 타일: {index}");
+        tokenViews[moveResult.TokenId].transform.position =
+            boardView.GetWorldPosition(index) +
+            new Vector3(0, tokenSpawnHeight, 0);
 
+        Debug.Log($"[Test] {moveResult.TokenId} 이동 완료 / 현재 타일: {index}");
+    }
+
+    private void HandleMoveResult(MoveResult moveResult) 
+    {
         bool captured = moveResult.Captured;
         string currentTurnPlayerId = moveResult.CurrentTurnPlayerId;
 
@@ -109,7 +167,6 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            //추가 턴
             Debug.Log($"[Test] {moveResult.TokenId} 잡기 성공, {currentTurnPlayerId} 추가 턴 부여");
         }
 
@@ -121,12 +178,7 @@ public class GameManager : MonoBehaviour
             {
                 Debug.Log($"남은 코인: {player.PlayerId} = {player.Coin}");
             }
-
-            // 미니게임 이동
         }
-
     }
-
- 
 
 }

@@ -9,13 +9,10 @@ public class MoveValidator
         this.tokens = tokens;
     }
 
-    public (MoveResult Validation, Token Token) Validate(string tokenId, string currentPlayerId, Queue<int> pendingSteps, bool isMovePhase)
+    public (MoveResult Validation, Token Token) Validate(string tokenId, string currentPlayerId, bool isMovePhase)
     {
         if (!isMovePhase)
             return (MoveResult.Fail(MoveError.InvalidGameState), null);
-
-        if (pendingSteps.Count == 0)
-            return (MoveResult.Fail(MoveError.NoStep), null);
 
         Token token = tokens.Find(t => t.TokenId == tokenId);
         if (token == null)
