@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 public enum MoveError
 {
     None,
@@ -12,7 +14,8 @@ public enum MoveError
 public class MoveResult
 {
     public MoveError Error { get; }
-    public string TokenId { get; }
+    public string GroupId { get; } 
+    public List<string> MovedTokenIds { get; }
     public int NewIndex { get; }
     public string CurrentTurnPlayerId { get; }
     public bool Captured { get; }
@@ -22,14 +25,16 @@ public class MoveResult
 
     private MoveResult(
         MoveError error,
-        string tokenId = null,
+        string groupId = null,
+        List<string> movedTokenIds = null,
         int newIndex = 0,
         string currentTurnPlayerId = null,
         bool captured = false,
         bool isRoundEnd = false)
     {
         Error = error;
-        TokenId = tokenId;
+        GroupId = groupId;
+        MovedTokenIds = movedTokenIds;
         NewIndex = newIndex;
         CurrentTurnPlayerId = currentTurnPlayerId;
         Captured = captured;
@@ -42,7 +47,8 @@ public class MoveResult
     }
 
     public static MoveResult Success(
-        string tokenId,
+        string groupId,
+        List<string> movedTokenIds,
         int newIndex,
         string currentTurnPlayerId,
         bool captured,
@@ -50,7 +56,8 @@ public class MoveResult
     {
         return new MoveResult(
             MoveError.None,
-            tokenId,
+            groupId,
+            movedTokenIds,
             newIndex,
             currentTurnPlayerId,
             captured,

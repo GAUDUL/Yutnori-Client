@@ -30,14 +30,15 @@ public class GameCore
         ruleEngine = new RuleEngine();
         yutSystem = new YutSystem();
         turnManager = new TurnManager(new List<string>(playersById.Keys));
-        moveValidator = new MoveValidator(tokens);
+        moveValidator = new MoveValidator(board);
         rollValidator = new RollValidator();
 
         this.playersById = playersById;
         this.tokens = tokens;
 
+        // 각 토큰을 그룹으로 생성
         foreach (var token in tokens)
-            board.PlaceAtStart(token);
+            board.CreateInitialGroup(token);
 
         currentState = GameState.WaitingForThrow;
     }
@@ -108,7 +109,8 @@ public class GameCore
         if (selectedTokenId == null)
             return MoveResult.Fail(MoveError.InvalidToken);
 
-        var (validation, token) = moveValidator.Validate(selectedTokenId, CurrentTurnPlayerId, currentState == GameState.WaitingForStepSelect);
+        // 이동할 토큰 그룹
+        var (validation, tokenGroup) = moveValidator.Validate(selectedTokenId, CurrentTurnPlayerId, currentState == GameState.WaitingForStepSelect);
         if (validation != null)
             return validation;
 
@@ -119,9 +121,17 @@ public class GameCore
             return MoveResult.Fail(MoveError.InvalidStep);
 
         pendingSteps.Remove(selectedStep);
-        Tile destination = board.MoveToken(token, selectedStep);
+        Tile destination = board.MoveTokenGroup(tokenGroup, selectedStep);
 
-        bool captured = ruleEngine.ResolveCapture(token, destination, playersById);
+        // 이동한 토큰 그룹에 속한 토큰들 List
+        List<string> movedTokenIds = new List<string>();
+        foreach (var t in tokenGroup.Tokens)
+        {
+            movedTokenIds.Add(t.TokenId);
+        }
+
+        bool captured = ruleEngine.ResolveCapture(tokenGroup, destination, playersById);
+
         bool isRoundEnd = false;
 
         // 잡으면 추가 턴
@@ -131,7 +141,7 @@ public class GameCore
             currentState = GameState.WaitingForThrow;
             selectedTokenId = null;
 
-            return MoveResult.Success(token.TokenId, token.CurrentTileIndex, CurrentTurnPlayerId, captured, isRoundEnd);
+            return MoveResult.Success(tokenGroup.GroupId, movedTokenIds, tokenGroup.CurrentTileIndex, CurrentTurnPlayerId, captured, isRoundEnd);
         }
 
         // 이동 횟수 남아있을 경우 말 선택 대기
@@ -147,7 +157,7 @@ public class GameCore
 
         selectedTokenId = null;
 
-        return MoveResult.Success(token.TokenId, token.CurrentTileIndex, CurrentTurnPlayerId, captured, isRoundEnd);
+        return MoveResult.Success(tokenGroup.GroupId, movedTokenIds, tokenGroup.CurrentTileIndex, CurrentTurnPlayerId, captured, isRoundEnd);
     }
 
 

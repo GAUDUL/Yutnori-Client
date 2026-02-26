@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
@@ -65,6 +66,8 @@ public class GameManager : MonoBehaviour
     //말 생성
     private void CreateToken(Player player, string tokenId)
     {
+        int startTileIndex = 0;
+
         var token = new Token(player.PlayerId, tokenId);
         tokens.Add(token);
 
@@ -73,7 +76,7 @@ public class GameManager : MonoBehaviour
         view.Initialize(tokenId);
         tokenViews[tokenId] = view;
 
-        Vector3 basePos = boardView.GetWorldPosition(token.CurrentTileIndex);
+        Vector3 basePos = boardView.GetWorldPosition(startTileIndex);
         obj.transform.position = basePos + new Vector3(0, tokenSpawnHeight, 0);
     }
     
@@ -149,11 +152,15 @@ public class GameManager : MonoBehaviour
     {
         int index = moveResult.NewIndex;
 
-        tokenViews[moveResult.TokenId].transform.position =
+        foreach (var tokenId in moveResult.MovedTokenIds)
+        {
+            tokenViews[tokenId].transform.position =
             boardView.GetWorldPosition(index) +
             new Vector3(0, tokenSpawnHeight, 0);
+        }
 
-        Debug.Log($"[Test] {moveResult.TokenId} 이동 완료 / 현재 타일: {index}");
+        Debug.Log($"[Test] {moveResult.GroupId} 이동 완료 / 현재 타일: {index}");
+
     }
 
     private void HandleMoveResult(MoveResult moveResult) 
@@ -167,7 +174,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            Debug.Log($"[Test] {moveResult.TokenId} 잡기 성공, {currentTurnPlayerId} 추가 턴 부여");
+            Debug.Log($"[Test] {moveResult.GroupId} 잡기 성공, {currentTurnPlayerId} 추가 턴 부여");
         }
 
         if (moveResult.IsRoundEnd)

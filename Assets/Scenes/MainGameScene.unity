@@ -386,7 +386,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   tokenPrefab: {fileID: 942178172211262044, guid: a05128d48b6e5b84ba7599f0cfe2fafa, type: 3}
   boardView: {fileID: 21566456}
-  stepSelectionUI: {fileID: 0}
+  stepSelectionUI: {fileID: 1717121802}
   tokenSpawnHeight: 0.4
   IsRoundEnd: 0
 --- !u!4 &171572440
@@ -2380,7 +2380,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StepSelectionUI
   stepButtonPrefab: {fileID: 5733953887591712664, guid: e2d669d0ce684664084585bb596fcd30, type: 3}
-  container: {fileID: 295550947}
+  container: {fileID: 1717121800}
 --- !u!1001 &1721479985
 PrefabInstance:
   m_ObjectHideFlags: 0
