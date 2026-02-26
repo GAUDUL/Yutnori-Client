@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using UnityEngine;
+using System;
 
 public class TokenGroup
 {
@@ -15,7 +15,7 @@ public class TokenGroup
     public TokenGroup(string playerId, int tileIndex, Token token)
     {
         PlayerId = playerId;
-        GroupId = $"{PlayerId}_Group";
+        GroupId = $"{playerId}_Group_{Guid.NewGuid():N}";
         CurrentTileIndex = tileIndex;
         Tokens.Add(token);
     }
@@ -23,6 +23,10 @@ public class TokenGroup
     // 업기
     public void Merge(TokenGroup other)
     {
+        if (other == null) return;
+        if (other.PlayerId != PlayerId)
+            throw new InvalidOperationException("다른 플레이어와 업기 불가능");
+
         Tokens.AddRange(other.Tokens);
         other.Tokens.Clear();
     }
@@ -36,7 +40,7 @@ public class TokenGroup
         {
             result.Add(new TokenGroup(token.PlayerId, CurrentTileIndex, token));
         }
-
+        //Tokens.Clear();
         return result;
     }
 }

@@ -60,4 +60,11 @@ public class RuleEngine
         return 3;
     }
 
+    // 업기 가능 토큰 그룹 반환
+    public List<TokenGroup> GetGroupCandidates(Tile tile, string playerId)
+    {
+        return tile.tokenGroups
+            .Where(g => g.PlayerId == playerId)
+            .ToList();
+    }
 }

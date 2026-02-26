@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject tokenPrefab;
     [SerializeField] private BoardView boardView;
     [SerializeField] private StepSelectionUI stepSelectionUI;
+    [SerializeField] private MergeSelectionUI mergeSelectionUI;
     [SerializeField] private float tokenSpawnHeight = 1.0f;
 
     private const int BOARD_SIZE = 20;
@@ -83,12 +84,17 @@ public class GameManager : MonoBehaviour
     // UI 동기화
     private void RefreshStepUI()
     {
-        var steps = new List<int>(gameCore.GetPendingSteps());
-        bool selectable =
-            gameCore.CanSelectStep &&
-            selectedTokenId != null;
+        if (gameCore.CanSelectStep)
+        {
+            var steps = new List<int>(gameCore.GetPendingSteps());
+            bool selectable = selectedTokenId != null;
 
-        stepSelectionUI.Show(steps, selectable, OnStepSelected);
+            stepSelectionUI.Show(steps, selectable, OnStepSelected);
+        }
+        else
+        {
+            stepSelectionUI.Hide();
+        }
     }
 
     //윷 던지기
@@ -163,10 +169,22 @@ public class GameManager : MonoBehaviour
 
     }
 
-    private void HandleMoveResult(MoveResult moveResult) 
+    private void HandleMoveResult(MoveResult moveResult)
     {
         bool captured = moveResult.Captured;
+        bool needMerge = moveResult.NeedMerge;
         string currentTurnPlayerId = moveResult.CurrentTurnPlayerId;
+
+        if (needMerge)
+        {
+            mergeSelectionUI.Show(merge =>
+            {
+                gameCore.MergeSelected(merge);
+                RefreshStepUI();
+            });
+
+            return;
+        }
 
         if (!captured)
         {

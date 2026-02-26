@@ -6,7 +6,8 @@ public class GameCore
     {
         WaitingForThrow,   // Roll 대기
         WaitingForTokenSelect, // Token 선택
-        WaitingForStepSelect   // Step 선택
+        WaitingForStepSelect,   // Step 선택
+        WaitingForMerge // 업기 대기 상태
     }
 
     private Board board;
@@ -22,6 +23,8 @@ public class GameCore
 
     private List<int> pendingSteps = new List<int>(); // 윷 던지기 결과 저장
     private string selectedTokenId; // 선택된 말
+    private List<TokenGroup> mergeCandidates; // 업기 후보 그룹
+    private Tile mergeTile; //업기 발생 타일
     private GameState currentState;
 
     public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
@@ -131,34 +134,97 @@ public class GameCore
         }
 
         bool captured = ruleEngine.ResolveCapture(tokenGroup, destination, playersById);
+        // 잡았으면 추가 턴 제공
+        bool grantExtraTurnByCapture = captured && !turnManager.UsedCaptureExtraTurn;
 
-        bool isRoundEnd = false;
-
-        // 잡으면 추가 턴
-        if (captured && !turnManager.UsedCaptureExtraTurn)
+        if (grantExtraTurnByCapture)
         {
             turnManager.GrantExtraTurnCapture();
-            currentState = GameState.WaitingForThrow;
+        }
+
+        // 업기 가능 여부
+        var groups = ruleEngine.GetGroupCandidates(destination, CurrentTurnPlayerId);
+        bool needMerge = groups.Count >= 2;
+
+        bool isRoundEnd = false;
+        
+        //업기 가능
+        if (needMerge)
+        {
+            mergeCandidates = groups;
+            mergeTile = destination;
+
+            currentState = GameState.WaitingForMerge;
+
             selectedTokenId = null;
 
-            return MoveResult.Success(tokenGroup.GroupId, movedTokenIds, tokenGroup.CurrentTileIndex, CurrentTurnPlayerId, captured, isRoundEnd);
+            return MoveResult.Success(
+                tokenGroup.GroupId,
+                movedTokenIds,
+                tokenGroup.CurrentTileIndex,
+                CurrentTurnPlayerId,
+                captured,
+                isRoundEnd,
+                needMerge
+            );
+        }
+
+        isRoundEnd = ResolveTurnFlow();
+
+        selectedTokenId = null;
+
+        return MoveResult.Success(
+            tokenGroup.GroupId, 
+            movedTokenIds, 
+            tokenGroup.CurrentTileIndex, 
+            CurrentTurnPlayerId, 
+            captured, 
+            isRoundEnd,
+            needMerge
+        );
+    }
+
+    public void MergeSelected(bool merge)
+    {
+        if (currentState != GameState.WaitingForMerge)
+            return;
+
+        if (merge && mergeCandidates != null && mergeCandidates.Count >= 2)
+        {
+            var baseGroup = mergeCandidates[0];
+            var targetGroup = mergeCandidates[1];
+
+            mergeTile.tokenGroups.Remove(targetGroup);
+
+            baseGroup.Merge(targetGroup);
+        }
+
+        mergeCandidates = null;
+        mergeTile = null;
+
+        ResolveTurnFlow();
+
+    }
+
+    // 현재 Turn State 설정
+    private bool ResolveTurnFlow()
+    {
+        if (turnManager.RemainingRolls > 0)
+        {
+            currentState = GameState.WaitingForThrow;
+            return false;
         }
 
         // 이동 횟수 남아있을 경우 말 선택 대기
         if (pendingSteps.Count > 0)
         {
             currentState = GameState.WaitingForTokenSelect;
-        }
-        else
-        {
-            isRoundEnd = turnManager.EndTurn();
-            currentState = GameState.WaitingForThrow;
+            return false;
         }
 
-        selectedTokenId = null;
-
-        return MoveResult.Success(tokenGroup.GroupId, movedTokenIds, tokenGroup.CurrentTileIndex, CurrentTurnPlayerId, captured, isRoundEnd);
+        bool isRoundEnd = turnManager.EndTurn();
+        currentState = GameState.WaitingForThrow;
+        return isRoundEnd;
     }
-
 
 }
