@@ -8,7 +8,7 @@ public class Player
     public Player(string id)
     {
         PlayerId = id;
-        Coin = 0;
+        Coin = 30;
     }
 
     public void AddCoin(int amount)

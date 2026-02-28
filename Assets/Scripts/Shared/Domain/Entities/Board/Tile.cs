@@ -2,7 +2,7 @@ using System.Collections.Generic;
 public class Tile
 {
     public int tileIndex { get; private set; }
-    public List<Token> tokens = new List<Token>();
+    public List<TokenGroup> tokenGroups = new List<TokenGroup>();
 
     public Tile(int index)
     {
