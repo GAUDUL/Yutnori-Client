@@ -47,6 +47,7 @@ public class GameCore
     }
 
     public string CurrentTurnPlayerId => turnManager.CurrentPlayerId;
+    public Player CurrentPlayer => playersById[turnManager.CurrentPlayerId];
     public bool CanSelectStep => currentState == GameState.WaitingForStepSelect;
     public IReadOnlyList<int> GetPendingSteps()
     {
@@ -132,6 +133,9 @@ public class GameCore
         pendingSteps.Remove(selectedStep);
         Tile destination = board.MoveTokenGroup(tokenGroup, selectedStep);
 
+        // 타일 기믹 실행
+        ExecuteTileEffect(destination, CurrentPlayer);
+
         // 이동한 토큰 그룹에 속한 토큰들 List
         List<string> movedTokenIds = new List<string>();
         foreach (var t in tokenGroup.Tokens)
@@ -188,6 +192,16 @@ public class GameCore
             isRoundEnd,
             needMerge
         );
+    }
+
+    // 타일 기믹 실행
+    private void ExecuteTileEffect(Tile tile, Player player)
+    {
+        var tileEffects = TileEffects.Default();
+        if (tileEffects.TryGetValue(tile.Type, out var effect))
+        {
+            effect.Execute(player, tile);
+        }
     }
 
     public void MergeSelected(bool merge)
