@@ -29,7 +29,7 @@ public class GameCore
 
     public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
     {
-        board = new Board(boardSize);
+        board = new Board(boardSize, MapData.Default());
         ruleEngine = new RuleEngine();
         yutSystem = new YutSystem();
         turnManager = new TurnManager(new List<string>(playersById.Keys));
@@ -51,6 +51,12 @@ public class GameCore
     public IReadOnlyList<int> GetPendingSteps()
     {
         return pendingSteps;
+    }
+
+    // 보드 타일 반환
+    public Tile[] GetTiles()
+    {
+        return board.GetTiles();
     }
 
     // 윷 던지기

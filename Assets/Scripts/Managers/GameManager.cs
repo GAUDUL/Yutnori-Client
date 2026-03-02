@@ -60,6 +60,8 @@ public class GameManager : MonoBehaviour
 
         gameCore = new GameCore(BOARD_SIZE, playersById, tokens);
 
+        boardView.ApplyTile(gameCore.GetTiles());
+
         // 초기 UI 상태 동기화
         RefreshStepUI();
     }
