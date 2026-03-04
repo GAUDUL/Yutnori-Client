@@ -38,10 +38,13 @@ public class Board
     }
 
     //말 이동
-    public Tile MoveTokenGroup(TokenGroup tokenGroup, int step)
+    public (Tile tile, int lapCount) MoveTokenGroup(TokenGroup tokenGroup, int step)
     {
         int current = tokenGroup.CurrentTileIndex;
         int tileCount = tiles.Length;
+
+        int totalMove = current + step;
+        int lapCount = totalMove / tileCount;
 
         int destination = ((current + step) % tileCount + tileCount) % tileCount;
 
@@ -50,7 +53,7 @@ public class Board
 
         tokenGroup.CurrentTileIndex = destination;
 
-        return tiles[destination];
+        return (tiles[destination], lapCount);
     }
 
     // 특정 인덱스 타일 반환

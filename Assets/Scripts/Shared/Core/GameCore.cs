@@ -131,7 +131,14 @@ public class GameCore
             return MoveResult.Fail(MoveError.InvalidStep);
 
         pendingSteps.Remove(selectedStep);
-        Tile destination = board.MoveTokenGroup(tokenGroup, selectedStep);
+        var (destination, lapCount) = board.MoveTokenGroup(tokenGroup, selectedStep);
+
+        // 한 바퀴 돌기 완료
+        if (lapCount > 0)
+        {
+            int rewardPerLap = tokenGroup.IsGrouped ? 60 : 40;
+            CurrentPlayer.AddCoin(rewardPerLap * lapCount);
+        }
 
         // 타일 기믹 실행
         ExecuteTileEffect(destination, CurrentPlayer);
