@@ -1,11 +1,12 @@
 
 using System;
+using System.Collections.Generic;
 
 public class Player
 {
     public string PlayerId { get; private set; }
     public int Coin { get; private set; }
-    //+ 아이템 등
+    public List<Item> Items = new List<Item>(); // 아이템
 
     public Player(string id)
     {
@@ -34,5 +35,15 @@ public class Player
         Coin -= lost;
 
         return lost;
+    }
+
+    public void AddItem(Item item)
+    {
+        Items.Add(item);
+    }
+
+    public void RemoveItem(Item item)
+    {
+        Items.Remove(item);
     }
 }

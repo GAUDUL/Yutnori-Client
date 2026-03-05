@@ -8,6 +8,7 @@ public static class TileEffects
         {
             {Tile.TileType.CoinGain, new CoinGainEffect() },
             {Tile.TileType.CoinLose, new CoinLoseEffect() },
+            {Tile.TileType.ItemGain, new ItemGainEffect() },
         };
     }
 }

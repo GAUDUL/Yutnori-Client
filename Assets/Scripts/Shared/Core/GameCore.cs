@@ -29,6 +29,7 @@ public class GameCore
     private Tile mergeTile; //업기 발생 타일
 
     private GameState currentState;
+    bool doubleMoveActive;
 
     public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
     {
@@ -54,6 +55,15 @@ public class GameCore
     public string CurrentTurnPlayerId => turnManager.CurrentPlayerId;
     public Player CurrentPlayer => playersById[turnManager.CurrentPlayerId];
     public bool CanSelectStep => currentState == GameState.WaitingForStepSelect;
+    public void AddStep(int step)
+    {
+        pendingSteps.Add(step);
+    }
+    public void EnableDoubleMove()
+    {
+        doubleMoveActive = true;
+    }
+
     public IReadOnlyList<int> GetPendingSteps()
     {
         return pendingSteps;
@@ -106,7 +116,7 @@ public class GameCore
             currentState == GameState.WaitingForTokenSelect ||
             currentState == GameState.WaitingForStepSelect;
 
-        var (validation, token) =
+        var (validation, tokenGroup) =
             moveValidator.Validate(tokenId, CurrentTurnPlayerId, isSelectableState);
 
         if (validation != null)
@@ -136,6 +146,13 @@ public class GameCore
             return MoveResult.Fail(MoveError.InvalidStep);
 
         pendingSteps.Remove(selectedStep);
+
+        // 2배 이동 아이템 사용
+        if (doubleMoveActive) 
+        {
+            selectedStep *= 2;
+            doubleMoveActive = false;
+        }
 
         // 말 이동 처리
         var (destination, lapCount) = moveSystem.ExecuteMove(tokenGroup, selectedStep, CurrentPlayer);
@@ -230,4 +247,22 @@ public class GameCore
         return isRoundEnd;
     }
 
+    // 아이템 사용
+    public void UseItem(Player user, Item item, Player targetPlayer, TokenGroup targetTokenGroup)
+    {
+        if (!ItemEffects.Effects.TryGetValue(item.Type, out var effect))
+            return;
+
+        effect.Apply(this, user, targetPlayer, targetTokenGroup);
+
+        user.RemoveItem(item);
+    }
+
+    // 잡기 x Move
+    public (Tile tile, int lapCount) MoveTokenWithoutCapture(TokenGroup tokenGroup, int step, Player player)
+    {
+        var (destination, lapCount) = moveSystem.ExecuteMove(tokenGroup, step, player);
+        tileEffectSystem.Execute(destination, player);
+        return (destination, lapCount);
+    }
 }

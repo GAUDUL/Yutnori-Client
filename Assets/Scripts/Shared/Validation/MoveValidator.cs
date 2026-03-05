@@ -9,7 +9,7 @@ public class MoveValidator
         this.board = board;
     }
 
-    public (MoveResult Validation, TokenGroup Token) Validate(string tokenId, string currentPlayerId, bool isMovePhase)
+    public (MoveResult Validation, TokenGroup TokenGroup) Validate(string tokenId, string currentPlayerId, bool isMovePhase)
     {
         if (!isMovePhase)
             return (MoveResult.Fail(MoveError.InvalidGameState), null);
