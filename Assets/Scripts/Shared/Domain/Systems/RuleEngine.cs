@@ -20,8 +20,8 @@ public class RuleEngine
                 // 코인 계산
                 int coin = CalculateCaptureCoin(movingGroup, other);
 
-                target.LoseCoin(coin);
-                mover.AddCoin(coin);
+                int stolen = target.LoseCoin(coin);
+                mover.AddCoin(stolen);
 
                 // 상대가 업기 상태일 경우, 업기 상태 해제
                 if (other.IsGrouped)
@@ -43,6 +43,16 @@ public class RuleEngine
         }
 
         return captured;
+    }
+
+    // 업기
+    public void ResolveMerge(List<TokenGroup> candidates, Tile tile)
+    {
+        var baseGroup = candidates[0];
+        var targetGroup = candidates[1];
+
+        tile.tokenGroups.Remove(targetGroup);
+        baseGroup.Merge(targetGroup);
     }
 
     // 코인 계산

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine.Rendering;
 
 public class GameCore
 {
@@ -13,18 +14,20 @@ public class GameCore
     private Board board;
     private RuleEngine ruleEngine;
     private YutSystem yutSystem;
+    private MoveSystem moveSystem;
+    private TileEffectSystem tileEffectSystem;
     private TurnManager turnManager;
-
-    private Dictionary<string, Player> playersById;
-    private List<Token> tokens;
 
     private MoveValidator moveValidator;
     private RollValidator rollValidator;
+
+    private Dictionary<string, Player> playersById;
 
     private List<int> pendingSteps = new List<int>(); // 윷 던지기 결과 저장
     private string selectedTokenId; // 선택된 말
     private List<TokenGroup> mergeCandidates; // 업기 후보 그룹
     private Tile mergeTile; //업기 발생 타일
+
     private GameState currentState;
 
     public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
@@ -37,11 +40,13 @@ public class GameCore
         rollValidator = new RollValidator();
 
         this.playersById = playersById;
-        this.tokens = tokens;
 
         // 각 토큰을 그룹으로 생성
         foreach (var token in tokens)
             board.CreateInitialGroup(token);
+
+        moveSystem = new MoveSystem(board);
+        tileEffectSystem = new TileEffectSystem();
 
         currentState = GameState.WaitingForThrow;
     }
@@ -131,33 +136,19 @@ public class GameCore
             return MoveResult.Fail(MoveError.InvalidStep);
 
         pendingSteps.Remove(selectedStep);
-        var (destination, lapCount) = board.MoveTokenGroup(tokenGroup, selectedStep);
 
-        // 한 바퀴 돌기 완료
-        if (lapCount > 0)
-        {
-            int rewardPerLap = tokenGroup.IsGrouped ? 60 : 40;
-            CurrentPlayer.AddCoin(rewardPerLap * lapCount);
-        }
+        // 말 이동 처리
+        var (destination, lapCount) = moveSystem.ExecuteMove(tokenGroup, selectedStep, CurrentPlayer);
 
         // 타일 기믹 실행
-        ExecuteTileEffect(destination, CurrentPlayer);
+        tileEffectSystem.Execute(destination, CurrentPlayer);
 
-        // 이동한 토큰 그룹에 속한 토큰들 List
-        List<string> movedTokenIds = new List<string>();
-        foreach (var t in tokenGroup.Tokens)
-        {
-            movedTokenIds.Add(t.TokenId);
-        }
-
+        // 말 잡기 처리
         bool captured = ruleEngine.ResolveCapture(tokenGroup, destination, playersById);
-        // 잡았으면 추가 턴 제공
-        bool grantExtraTurnByCapture = captured && !turnManager.UsedCaptureExtraTurn;
 
-        if (grantExtraTurnByCapture)
-        {
+        // 잡았으면 추가 턴 제공
+        if (captured && !turnManager.UsedCaptureExtraTurn)
             turnManager.GrantExtraTurnCapture();
-        }
 
         // 업기 가능 여부
         var groups = ruleEngine.GetGroupCandidates(destination, CurrentTurnPlayerId);
@@ -177,12 +168,12 @@ public class GameCore
 
             return MoveResult.Success(
                 tokenGroup.GroupId,
-                movedTokenIds,
+                tokenGroup.GetTokenIds(),
                 tokenGroup.CurrentTileIndex,
                 CurrentTurnPlayerId,
                 captured,
-                isRoundEnd,
-                needMerge
+                false,
+                true
             );
         }
 
@@ -191,8 +182,8 @@ public class GameCore
         selectedTokenId = null;
 
         return MoveResult.Success(
-            tokenGroup.GroupId, 
-            movedTokenIds, 
+            tokenGroup.GroupId,
+            tokenGroup.GetTokenIds(), 
             tokenGroup.CurrentTileIndex, 
             CurrentTurnPlayerId, 
             captured, 
@@ -201,36 +192,21 @@ public class GameCore
         );
     }
 
-    // 타일 기믹 실행
-    private void ExecuteTileEffect(Tile tile, Player player)
-    {
-        var tileEffects = TileEffects.Default();
-        if (tileEffects.TryGetValue(tile.Type, out var effect))
-        {
-            effect.Execute(player, tile);
-        }
-    }
-
-    public void MergeSelected(bool merge)
+    public MergeResult MergeSelected(bool merge)
     {
         if (currentState != GameState.WaitingForMerge)
-            return;
+            return MergeResult.Fail();
 
         if (merge && mergeCandidates != null && mergeCandidates.Count >= 2)
         {
-            var baseGroup = mergeCandidates[0];
-            var targetGroup = mergeCandidates[1];
-
-            mergeTile.tokenGroups.Remove(targetGroup);
-
-            baseGroup.Merge(targetGroup);
+            ruleEngine.ResolveMerge(mergeCandidates, mergeTile);
         }
 
         mergeCandidates = null;
         mergeTile = null;
 
-        ResolveTurnFlow();
-
+        bool isRoundEnd = ResolveTurnFlow();
+        return MergeResult.Success(CurrentTurnPlayerId, isRoundEnd);
     }
 
     // 현재 Turn State 설정

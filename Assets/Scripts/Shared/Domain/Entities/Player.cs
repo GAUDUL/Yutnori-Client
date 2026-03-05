@@ -1,4 +1,6 @@
 
+using System;
+
 public class Player
 {
     public string PlayerId { get; private set; }
@@ -21,18 +23,16 @@ public class Player
         Coin += amount;
     }
 
-    public void LoseCoin(int amount)
+    public int LoseCoin(int amount)
     {
         if(amount <= 0)
         {
-            return;
+            return 0;
         }
 
-        Coin -= amount;
+        int lost = Math.Min(Coin, amount);
+        Coin -= lost;
 
-        if(Coin < 0)
-        {
-            Coin = 0;
-        }
+        return lost;
     }
 }

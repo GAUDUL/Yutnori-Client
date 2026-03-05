@@ -43,13 +43,21 @@ public class Board
         int current = tokenGroup.CurrentTileIndex;
         int tileCount = tiles.Length;
 
-        int totalMove = current + step;
-        int lapCount = totalMove / tileCount;
-
         int destination = ((current + step) % tileCount + tileCount) % tileCount;
 
-        tiles[current].tokenGroups.Remove(tokenGroup);
-        tiles[destination].tokenGroups.Add(tokenGroup);
+        int lapCount = 0;
+
+        if (step > 0)
+        {
+            int totalMove = current + step;
+            lapCount = totalMove / tileCount;
+        }
+
+        if (current != destination)
+        {
+            tiles[current].tokenGroups.Remove(tokenGroup);
+            tiles[destination].tokenGroups.Add(tokenGroup);
+        }
 
         tokenGroup.CurrentTileIndex = destination;
 

@@ -181,7 +181,13 @@ public class GameManager : MonoBehaviour
         {
             mergeSelectionUI.Show(merge =>
             {
-                gameCore.MergeSelected(merge);
+                var result = gameCore.MergeSelected(merge);
+                if (!result.IsSuccess)
+                    return;
+
+                if (result.IsRoundEnd)
+                    Debug.Log("[Test] 라운드 종료");
+
                 RefreshStepUI();
             });
 

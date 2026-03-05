@@ -40,7 +40,22 @@ public class TokenGroup
         {
             result.Add(new TokenGroup(token.PlayerId, CurrentTileIndex, token));
         }
-        //Tokens.Clear();
+
+        Tokens.Clear();
+
         return result;
+    }
+
+    // 그룹에 속한 토큰들 반환
+    public List<string> GetTokenIds()
+    {
+        var ids = new List<string>();
+
+        foreach (var token in Tokens)
+        {
+            ids.Add(token.TokenId);
+        }
+
+        return ids;
     }
 }
