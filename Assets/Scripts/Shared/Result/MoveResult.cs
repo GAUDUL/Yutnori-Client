@@ -21,6 +21,7 @@ public class MoveResult
     public bool Captured { get; }
     public bool IsRoundEnd { get; }
     public bool NeedMerge { get; }
+    public bool IsTeleport;
 
     public bool IsSuccess => Error == MoveError.None;
 
@@ -32,7 +33,8 @@ public class MoveResult
         string currentTurnPlayerId = null,
         bool captured = false,
         bool isRoundEnd = false,
-        bool needMerge = false)
+        bool needMerge = false,
+        bool isTeleport = false)
     {
         Error = error;
         GroupId = groupId;
@@ -42,7 +44,8 @@ public class MoveResult
         Captured = captured;
         IsRoundEnd = isRoundEnd;
         NeedMerge = needMerge;
-     }
+        IsTeleport = isTeleport;
+    }
 
     public static MoveResult Fail(MoveError error)
     {
@@ -56,7 +59,8 @@ public class MoveResult
         string currentTurnPlayerId,
         bool captured,
         bool isRoundEnd,
-        bool needMerge)
+        bool needMerge,
+        bool isTeleport = false)
     {
         return new MoveResult(
             MoveError.None,
@@ -66,6 +70,7 @@ public class MoveResult
             currentTurnPlayerId,
             captured,
             isRoundEnd,
-            needMerge);
+            needMerge,
+            isTeleport);
     }
 }

@@ -13,19 +13,19 @@ public static class MapData
             { 4, Tile.TileType.RandomMapEvent },
             { 5, Tile.TileType.ItemGain },
             { 6, Tile.TileType.CoinLose },
-            { 7, Tile.TileType.RandomPlayerEvent },
+            { 7, Tile.TileType.Flip },
             { 8, Tile.TileType.CoinGain },
             { 9, Tile.TileType.CoinLose },
             { 10, Tile.TileType.RandomMapEvent },
             { 11, Tile.TileType.CoinGain },
             { 12, Tile.TileType.ItemGain },
             { 13, Tile.TileType.CoinLose },
-            { 14, Tile.TileType.RandomPlayerEvent },
+            { 14, Tile.TileType.Flip },
             { 15, Tile.TileType.CoinLose },
             { 16, Tile.TileType.ItemGain },
             { 17, Tile.TileType.CoinGain },
             { 18, Tile.TileType.RandomMapEvent },
-            { 19, Tile.TileType.RandomPlayerEvent },
+            { 19, Tile.TileType.Flip },
         };
     }
 }

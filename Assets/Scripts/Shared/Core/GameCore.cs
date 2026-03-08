@@ -16,6 +16,7 @@ public class GameCore
     private YutSystem yutSystem;
     private MoveSystem moveSystem;
     private TileEffectSystem tileEffectSystem;
+    private MapEventSystem mapEventSystem;
     private TurnManager turnManager;
 
     private MoveValidator moveValidator;
@@ -47,7 +48,8 @@ public class GameCore
             board.CreateInitialGroup(token);
 
         moveSystem = new MoveSystem(board);
-        tileEffectSystem = new TileEffectSystem();
+        mapEventSystem = new MapEventSystem(turnManager);
+        tileEffectSystem = new TileEffectSystem(mapEventSystem);
 
         currentState = GameState.WaitingForThrow;
     }
@@ -157,11 +159,30 @@ public class GameCore
         // 말 이동 처리
         var (destination, lapCount) = moveSystem.ExecuteMove(tokenGroup, selectedStep, CurrentPlayer);
 
+        bool isTeleport = false;
+
+        // 연결된 칸 도착 시
+        if (destination.ConnectedTileIndex.HasValue)
+        {
+            int targetIndex = destination.ConnectedTileIndex.Value;
+
+            destination.ConnectedTileIndex = null;
+            board.GetTile(targetIndex).ConnectedTileIndex = null;
+
+            destination = board.TeleportTokenGroup(tokenGroup, targetIndex);
+
+            isTeleport = true;
+        }
+
         // 타일 기믹 실행
         tileEffectSystem.Execute(destination, CurrentPlayer);
 
         // 말 잡기 처리
-        bool captured = ruleEngine.ResolveCapture(tokenGroup, destination, playersById);
+        bool captured = false;
+        if (!isTeleport)
+        {
+            captured = ruleEngine.ResolveCapture(tokenGroup, destination, playersById);
+        }
 
         // 잡았으면 추가 턴 제공
         if (captured && !turnManager.UsedCaptureExtraTurn)
@@ -190,10 +211,12 @@ public class GameCore
                 CurrentTurnPlayerId,
                 captured,
                 false,
-                true
+                true,
+                isTeleport
             );
         }
 
+        // 턴 확인
         isRoundEnd = ResolveTurnFlow();
 
         selectedTokenId = null;
@@ -205,7 +228,9 @@ public class GameCore
             CurrentTurnPlayerId, 
             captured, 
             isRoundEnd,
-            needMerge
+            needMerge,
+            isTeleport
+
         );
     }
 
@@ -226,7 +251,7 @@ public class GameCore
         return MergeResult.Success(CurrentTurnPlayerId, isRoundEnd);
     }
 
-    // 현재 Turn State 설정
+    // 현재 Turn State 설정 & 턴 확인
     private bool ResolveTurnFlow()
     {
         if (turnManager.RemainingRolls > 0)
@@ -248,14 +273,14 @@ public class GameCore
     }
 
     // 아이템 사용
-    public void UseItem(Player user, Item item, Player targetPlayer, TokenGroup targetTokenGroup)
+    public void UseItem(Player player, Item item, Player targetPlayer, TokenGroup targetTokenGroup)
     {
         if (!ItemEffects.Effects.TryGetValue(item.Type, out var effect))
             return;
 
-        effect.Apply(this, user, targetPlayer, targetTokenGroup);
+        effect.Apply(this, player, targetPlayer, targetTokenGroup);
 
-        user.RemoveItem(item);
+        player.RemoveItem(item);
     }
 
     // 잡기 x Move

@@ -1,4 +1,5 @@
 
+// æ∆¿Ã≈€ »πµÊ ƒ≠
 public class ItemGainEffect : ITileEffect
 {
     private ItemSystem itemSystem = new ItemSystem();

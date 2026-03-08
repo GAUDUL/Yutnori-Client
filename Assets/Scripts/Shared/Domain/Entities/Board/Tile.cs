@@ -9,15 +9,20 @@ public class Tile
         CoinLose, // 코인 차감
         ItemGain, // 아이템
         RandomMapEvent, // 맵 기믹
-        RandomPlayerEvent // 뒤집
+        Flip // 뒤집
     }
 
     public TileType Type;
+    public TileType? OriginalType;
+
+    public Board board {  get; private set; }
     public int tileIndex { get; private set; }
     public List<TokenGroup> tokenGroups = new List<TokenGroup>();
+    public int? ConnectedTileIndex { get; set; } // 연결된 칸
 
-    public Tile(int index)
+    public Tile(int index, Board board)
     {
         tileIndex = index;
+        this.board = board;
     }
 }

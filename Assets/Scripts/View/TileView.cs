@@ -31,7 +31,7 @@ public class TileView : MonoBehaviour
                 targetColor = Color.black;
                 break;
 
-            case TileType.RandomPlayerEvent:
+            case TileType.Flip:
                 targetColor = new Color(0.6f, 0.2f, 1f);
                 break;
 

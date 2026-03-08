@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public class Board
 {
     private Tile[] tiles;
+    public int TileCount => tiles.Length;
 
     public Board(int tileCount, Dictionary<int, Tile.TileType> tileTypeMap)
     {
@@ -10,7 +13,7 @@ public class Board
 
         for (int i = 0; i < tileCount; i++)
         {
-            tiles[i] = new Tile(i);
+            tiles[i] = new Tile(i, this);
 
             if(tileTypeMap.TryGetValue(i, out var type))
                 tiles[i].Type= type;
@@ -62,6 +65,22 @@ public class Board
         tokenGroup.CurrentTileIndex = destination;
 
         return (tiles[destination], lapCount);
+    }
+
+    // ¸Ê ±â¹Í: ¿¬°áµÈ Ä­À¸·Î ÀÌµ¿
+    public Tile TeleportTokenGroup(TokenGroup tokenGroup, int destinationIndex)
+    {
+        int current = tokenGroup.CurrentTileIndex;
+
+        if (current != destinationIndex)
+        {
+            tiles[current].tokenGroups.Remove(tokenGroup);
+            tiles[destinationIndex].tokenGroups.Add(tokenGroup);
+        }
+
+        tokenGroup.CurrentTileIndex = destinationIndex;
+
+        return tiles[destinationIndex];
     }
 
     // Æ¯Á¤ ÀÎµ¦½º Å¸ÀÏ ¹ÝÈ¯

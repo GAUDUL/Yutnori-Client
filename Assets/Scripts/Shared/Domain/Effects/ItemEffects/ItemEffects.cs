@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 
+// 아이템 종류
 public static class ItemEffects
 {
     public static readonly Dictionary<ItemType, IItemEffect> Effects =
