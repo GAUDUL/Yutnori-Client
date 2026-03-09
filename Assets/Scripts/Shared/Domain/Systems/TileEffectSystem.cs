@@ -5,9 +5,9 @@ public class TileEffectSystem
 {
     private Dictionary<TileType, ITileEffect> effects;
 
-    public TileEffectSystem(MapEventSystem mapEventSystem)
+    public TileEffectSystem(GameCore gameCore, MapEventSystem mapEventSystem)
     {
-        effects = TileEffects.Default(mapEventSystem);
+        effects = TileEffects.Default(gameCore, mapEventSystem);
     }
 
     public void Execute(Tile tile, Player player)

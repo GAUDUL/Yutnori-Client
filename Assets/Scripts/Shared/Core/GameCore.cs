@@ -49,11 +49,12 @@ public class GameCore
 
         moveSystem = new MoveSystem(board);
         mapEventSystem = new MapEventSystem(turnManager);
-        tileEffectSystem = new TileEffectSystem(mapEventSystem);
+        tileEffectSystem = new TileEffectSystem(this, mapEventSystem);
 
         currentState = GameState.WaitingForThrow;
     }
 
+    public Dictionary<string, Player> PlayersById => playersById;
     public string CurrentTurnPlayerId => turnManager.CurrentPlayerId;
     public Player CurrentPlayer => playersById[turnManager.CurrentPlayerId];
     public bool CanSelectStep => currentState == GameState.WaitingForStepSelect;

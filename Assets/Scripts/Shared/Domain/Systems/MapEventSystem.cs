@@ -37,6 +37,7 @@ public class MapEventSystem
             }
         }
     }
+
     public void AddBoardEvent(BoardEvent e)
     {
         activeEvents.Add(e);
