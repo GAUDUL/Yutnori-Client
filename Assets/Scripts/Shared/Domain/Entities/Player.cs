@@ -1,9 +1,12 @@
 
+using System;
+using System.Collections.Generic;
+
 public class Player
 {
     public string PlayerId { get; private set; }
     public int Coin { get; private set; }
-    //+ 아이템 등
+    public List<Item> Items = new List<Item>(); // 아이템
 
     public Player(string id)
     {
@@ -21,18 +24,26 @@ public class Player
         Coin += amount;
     }
 
-    public void LoseCoin(int amount)
+    public int LoseCoin(int amount)
     {
         if(amount <= 0)
         {
-            return;
+            return 0;
         }
 
-        Coin -= amount;
+        int lost = Math.Min(Coin, amount);
+        Coin -= lost;
 
-        if(Coin < 0)
-        {
-            Coin = 0;
-        }
+        return lost;
+    }
+
+    public void AddItem(Item item)
+    {
+        Items.Add(item);
+    }
+
+    public void RemoveItem(Item item)
+    {
+        Items.Remove(item);
     }
 }

@@ -29,8 +29,8 @@ Transform:
   m_GameObject: {fileID: 2495981489102914867}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.336, y: 0.035, z: -0.365}
-  m_LocalScale: {x: 0.095370896, y: 0.0333, z: 0.091489226}
+  m_LocalPosition: {x: 0.32805, y: 0.03829, z: -0.3582}
+  m_LocalScale: {x: 0.07946208, y: 0.5, z: 0.08278676}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -125,4 +125,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d3008f581c79a74bb822e06c76c5bb5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TileView
-  Index: 0
+  baseRenderer: {fileID: 1365418518024357052}

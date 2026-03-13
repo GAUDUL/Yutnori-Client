@@ -15,6 +15,7 @@ public class TurnManager
     {
         this.playerOrder = playerOrder;
     }
+    public int PlayerCount => playerOrder.Count;
 
     public void UseRoll()
     {

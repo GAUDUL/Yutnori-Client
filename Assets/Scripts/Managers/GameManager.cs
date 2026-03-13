@@ -60,6 +60,8 @@ public class GameManager : MonoBehaviour
 
         gameCore = new GameCore(BOARD_SIZE, playersById, tokens);
 
+        boardView.ApplyTile(gameCore.GetTiles());
+
         // 초기 UI 상태 동기화
         RefreshStepUI();
     }
@@ -179,7 +181,13 @@ public class GameManager : MonoBehaviour
         {
             mergeSelectionUI.Show(merge =>
             {
-                gameCore.MergeSelected(merge);
+                var result = gameCore.MergeSelected(merge);
+                if (!result.IsSuccess)
+                    return;
+
+                if (result.IsRoundEnd)
+                    Debug.Log("[Test] 라운드 종료");
+
                 RefreshStepUI();
             });
 

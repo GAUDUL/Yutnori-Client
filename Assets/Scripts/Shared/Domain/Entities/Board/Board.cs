@@ -1,16 +1,22 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public class Board
 {
     private Tile[] tiles;
+    public int TileCount => tiles.Length;
 
-    public Board(int tileCount)
+    public Board(int tileCount, Dictionary<int, Tile.TileType> tileTypeMap)
     {
         tiles = new Tile[tileCount];
 
         for (int i = 0; i < tileCount; i++)
         {
-            tiles[i] = new Tile(i);
+            tiles[i] = new Tile(i, this);
+
+            if(tileTypeMap.TryGetValue(i, out var type))
+                tiles[i].Type= type;
         }
     }
 
@@ -35,31 +41,57 @@ public class Board
     }
 
     //말 이동
-    public Tile MoveTokenGroup(TokenGroup tokenGroup, int step)
+    public (Tile tile, int lapCount) MoveTokenGroup(TokenGroup tokenGroup, int step)
     {
         int current = tokenGroup.CurrentTileIndex;
         int tileCount = tiles.Length;
 
         int destination = ((current + step) % tileCount + tileCount) % tileCount;
 
-        tiles[current].tokenGroups.Remove(tokenGroup);
-        tiles[destination].tokenGroups.Add(tokenGroup);
+        int lapCount = 0;
+
+        if (step > 0)
+        {
+            int totalMove = current + step;
+            lapCount = totalMove / tileCount;
+        }
+
+        if (current != destination)
+        {
+            tiles[current].tokenGroups.Remove(tokenGroup);
+            tiles[destination].tokenGroups.Add(tokenGroup);
+        }
 
         tokenGroup.CurrentTileIndex = destination;
 
-        return tiles[destination];
+        return (tiles[destination], lapCount);
     }
 
-    //// 시작 위치에 말 배치
-    //public void PlaceAtStart(TokenGroup tokenGroup)
-    //{
-    //    tiles[0].tokenGroups.Add(tokenGroup);
-    //    tokenGroup.CurrentTileIndex = 0;
-    //}
+    // 맵 기믹: 연결된 칸으로 이동
+    public Tile TeleportTokenGroup(TokenGroup tokenGroup, int destinationIndex)
+    {
+        int current = tokenGroup.CurrentTileIndex;
+
+        if (current != destinationIndex)
+        {
+            tiles[current].tokenGroups.Remove(tokenGroup);
+            tiles[destinationIndex].tokenGroups.Add(tokenGroup);
+        }
+
+        tokenGroup.CurrentTileIndex = destinationIndex;
+
+        return tiles[destinationIndex];
+    }
 
     // 특정 인덱스 타일 반환
     public Tile GetTile(int index)
     {
         return tiles[index];
+    }
+
+    // 모든 타일 반환
+    public Tile[] GetTiles()
+    {
+        return tiles;
     }
 }
