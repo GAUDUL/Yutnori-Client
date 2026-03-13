@@ -10,26 +10,29 @@ public class Coin10GiveOr5TakeEvent : IFlipEvent
 
     public void Execute(Player currentPlayer, List<Player> players)
     {
-        var poorest = players
-                           // 오름차순 정렬
-                          .OrderBy(p => p.Coin)
-                          .FirstOrDefault();
+        int minCoin = players.Min(p => p.Coin);
 
-        if (poorest == null || poorest.PlayerId == currentPlayer.PlayerId) return;
+        // poorest 리스트
+        var poorestPlayers = players
+            .Where(p => p.Coin == minCoin && p.PlayerId != currentPlayer.PlayerId)
+            .ToList();
 
-        int subRoll = random.Next(0, 10);
+        if (!poorestPlayers.Any()) return;
 
-        // 코인 주기
-        if (subRoll < 7)
+        foreach (var poorest in poorestPlayers)
         {
-            int actualTake = currentPlayer.LoseCoin(10);
-            poorest.AddCoin(actualTake);
-        }
-        // 코인 뺏기
-        else
-        {
-            int actualTake = poorest.LoseCoin(5);
-            currentPlayer.AddCoin(actualTake);
+            int subRoll = random.Next(0, 10);
+
+            if (subRoll < 7)
+            {
+                int actualTake = currentPlayer.LoseCoin(10);
+                poorest.AddCoin(actualTake);
+            }
+            else
+            {
+                int actualTake = poorest.LoseCoin(5);
+                currentPlayer.AddCoin(actualTake);
+            }
         }
     }
 }
