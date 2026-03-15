@@ -25,13 +25,11 @@ public class Coin10GiveOr5TakeEvent : IFlipEvent
 
             if (subRoll < 7)
             {
-                int actualTake = currentPlayer.LoseCoin(10);
-                poorest.AddCoin(actualTake);
+                poorest.AddCoin(10);
             }
             else
             {
-                int actualTake = poorest.LoseCoin(5);
-                currentPlayer.AddCoin(actualTake);
+                poorest.LoseCoin(5);
             }
         }
     }
