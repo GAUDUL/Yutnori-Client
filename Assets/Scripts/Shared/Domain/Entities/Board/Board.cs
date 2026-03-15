@@ -32,6 +32,23 @@ public class Board
         }
     }
 
+    public TokenGroup GetTokenGroup(string tokenId)
+    {
+        TokenGroup foundGroup = null;
+
+        foreach (var group in GetAllGroups())
+        {
+            var token = group.Tokens.Find(t => t.TokenId == tokenId);
+            if (token != null)
+            {
+                foundGroup = group;
+                break;
+            }
+        }
+
+        return foundGroup;
+    }
+
     // 초기 그룹 생성
     public TokenGroup CreateInitialGroup(Token token)
     {

@@ -17,15 +17,7 @@ public class MoveValidator
         TokenGroup foundGroup = null;
 
         // 각 그룹 안의 말 탐색
-        foreach (var group in board.GetAllGroups())
-        {
-            var token = group.Tokens.Find(t => t.TokenId == tokenId);
-            if (token != null)
-            {
-                foundGroup = group;
-                break;
-            }
-        }
+        foundGroup = board.GetTokenGroup(tokenId);
 
         if (foundGroup == null)
             return (MoveResult.Fail(MoveError.InvalidToken), null);

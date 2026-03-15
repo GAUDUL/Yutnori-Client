@@ -5,12 +5,15 @@ using System.Collections.Generic;
 public class Player
 {
     public string PlayerId { get; private set; }
+    public string DisplayName { get; private set; }
+
     public int Coin { get; private set; }
     public List<Item> Items = new List<Item>(); // 아이템
 
-    public Player(string id)
+    public Player(string id, string displayName)
     {
         PlayerId = id;
+        DisplayName = displayName;
         Coin = 30;
     }
 
@@ -45,5 +48,10 @@ public class Player
     public void RemoveItem(Item item)
     {
         Items.Remove(item);
+    }
+
+    public Item GetItemById(string itemId)
+    {
+        return Items.Find(i => i.Id == itemId);
     }
 }

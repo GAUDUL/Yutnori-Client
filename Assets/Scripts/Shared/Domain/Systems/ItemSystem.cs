@@ -4,6 +4,10 @@ public class ItemSystem
 {
     private Random random = new Random();
 
+    private string selectedItemId;
+    private ItemTargetType selectedTargetType;
+
+    // 아이템 생성 및 제공
     public Item GenerateItem()
     {
         int roll = random.Next(100);

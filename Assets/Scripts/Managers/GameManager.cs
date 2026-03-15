@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Unity.VisualScripting.Antlr3.Runtime;
+using System;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
@@ -8,8 +8,12 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private GameObject tokenPrefab;
     [SerializeField] private BoardView boardView;
+
     [SerializeField] private StepSelectionUI stepSelectionUI;
     [SerializeField] private MergeSelectionUI mergeSelectionUI;
+    [SerializeField] private ItemSelectionUI itemSelectionUI;
+    [SerializeField] private PlayerSelectionUI playerSelectionUI;
+
     [SerializeField] private float tokenSpawnHeight = 1.0f;
 
     private const int BOARD_SIZE = 20;
@@ -28,6 +32,9 @@ public class GameManager : MonoBehaviour
     private string selectedTokenId;
     private int? selectedStep;
 
+    private string selectedItemId;
+    private ItemTargetType selectedItemTargetType;
+    private bool isSelectingItemTarget;
 
     private void Awake()
     {
@@ -49,8 +56,9 @@ public class GameManager : MonoBehaviour
         //플레이어 생성
         for (int i = 1; i <= playerCount; i++)
         {
-            string playerId = $"P{i}";
-            var player = new Player(playerId);
+            string playerId = Guid.NewGuid().ToString();
+            string playerName = $"P{i}";
+            var player = new Player(playerId, playerName);
             playersById.Add(playerId, player);
 
             // 말 2개 생성
@@ -62,8 +70,14 @@ public class GameManager : MonoBehaviour
 
         boardView.ApplyTile(gameCore.GetTiles());
 
+
+        stepSelectionUI.Hide();
+        itemSelectionUI.Hide();
+        playerSelectionUI.Hide();
+
         // 초기 UI 상태 동기화
         RefreshStepUI();
+        RefreshItemUI();
     }
 
     //말 생성
@@ -83,7 +97,7 @@ public class GameManager : MonoBehaviour
         obj.transform.position = basePos + new Vector3(0, tokenSpawnHeight, 0);
     }
     
-    // UI 동기화
+    // Step UI 동기화
     private void RefreshStepUI()
     {
         if (gameCore.CanSelectStep)
@@ -98,6 +112,23 @@ public class GameManager : MonoBehaviour
             stepSelectionUI.Hide();
         }
     }
+    
+    // Item UI 동기화
+    private void RefreshItemUI()
+    {
+        string playerId = gameCore.CurrentTurnPlayerId;
+
+        if (gameCore.CanUseItem)
+        {
+            var items = new List<Item>(playersById[playerId].Items);
+
+            itemSelectionUI.Show(items, OnItemSelected);
+        }
+        else
+        {
+            itemSelectionUI.Hide();
+        }
+    }
 
     //윷 던지기
     public void OnClickThrowButton()
@@ -109,15 +140,23 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[Test] {gameCore.CurrentTurnPlayerId} 윷 던지기 결과: ({rollResult.ResultStep}칸)");
+        Debug.Log($"[Test] {gameCore.CurrentTurnPlaeyrName} 윷 던지기 결과: ({rollResult.ResultStep}칸)");
 
         RefreshStepUI();
+        RefreshItemUI();
     }
 
 
     //말 선택 (Token 선택 시 실행)
     public void OnSelectToken(string tokenId)
     {
+
+        if (isSelectingItemTarget)
+        {
+            HandleItemTokenTarget(tokenId);
+            return;
+        }
+
         bool success = gameCore.SelectToken(tokenId);
 
         if (!success)
@@ -129,6 +168,7 @@ public class GameManager : MonoBehaviour
         selectedTokenId = tokenId;
 
         RefreshStepUI();
+        RefreshItemUI();
     }
 
     // 선택한 말 이동 (Step 선택 시 실행)
@@ -154,8 +194,10 @@ public class GameManager : MonoBehaviour
         selectedStep = null;
 
         RefreshStepUI();
+        RefreshItemUI();
     }
 
+    //말 이동 view
     private void UpdateTokenView(MoveResult moveResult)
     {
         int index = moveResult.NewIndex;
@@ -175,7 +217,6 @@ public class GameManager : MonoBehaviour
     {
         bool captured = moveResult.Captured;
         bool needMerge = moveResult.NeedMerge;
-        string currentTurnPlayerId = moveResult.CurrentTurnPlayerId;
 
         if (needMerge)
         {
@@ -186,7 +227,13 @@ public class GameManager : MonoBehaviour
                     return;
 
                 if (result.IsRoundEnd)
+                {
+                    foreach (var player in playersById.Values)
+                    {
+                        Debug.Log($"남은 코인: {player.DisplayName} = {player.Coin}");
+                    }
                     Debug.Log("[Test] 라운드 종료");
+                }
 
                 RefreshStepUI();
             });
@@ -196,11 +243,11 @@ public class GameManager : MonoBehaviour
 
         if (!captured)
         {
-            Debug.Log($"[Test] 턴 종료. 다음 플레이어: {currentTurnPlayerId}");
+            Debug.Log($"[Test] 턴 종료. 다음 플레이어: {gameCore.CurrentTurnPlaeyrName}");
         }
         else
         {
-            Debug.Log($"[Test] {moveResult.GroupId} 잡기 성공, {currentTurnPlayerId} 추가 턴 부여");
+            Debug.Log($"[Test] {moveResult.GroupId} 잡기 성공, {gameCore.CurrentTurnPlaeyrName} 추가 턴 부여");
         }
 
         if (moveResult.IsRoundEnd)
@@ -209,9 +256,121 @@ public class GameManager : MonoBehaviour
 
             foreach (var player in playersById.Values)
             {
-                Debug.Log($"남은 코인: {player.PlayerId} = {player.Coin}");
+                Debug.Log($"남은 코인: {player.DisplayName} = {player.Coin}");
             }
         }
+    }
+
+    // 아이템 선택
+    private void OnItemSelected(string itemId)
+    {
+        var player = playersById[gameCore.CurrentTurnPlayerId];
+        var item = player.GetItemById(itemId);
+
+        if (item == null)
+        {
+            Debug.Log("아이템 없음");
+            return;
+        }
+
+        var effect = ItemEffects.Effects[item.Type];
+
+        selectedItemId = itemId;
+        selectedItemTargetType = effect.TargetType;
+
+        isSelectingItemTarget = true;
+
+        HandleItemTargetSelection();
+    }
+
+    // 아이템 타겟 설정
+    private void HandleItemTargetSelection()
+    {
+        switch (selectedItemTargetType)
+        {
+            case ItemTargetType.None:
+                ExecuteItem(null, null);
+                break;
+
+            case ItemTargetType.MyToken:
+                Debug.Log("본인 말 선택 필요");
+                break;
+
+            case ItemTargetType.EnemyToken:
+                Debug.Log("상대 말 선택 필요");
+                break;
+
+            case ItemTargetType.EnemyPlayer:
+                playerSelectionUI.Show(GetEnemyPlayers(), OnPlayerSelected);
+                break;
+
+        }
+    }
+
+    // 타겟 토큰 선택
+    private void HandleItemTokenTarget(string tokenId)
+    {
+        var token = tokens.Find(t => t.TokenId == tokenId);
+
+        string targetPlayerId = token.PlayerId;
+
+        if (selectedItemTargetType == ItemTargetType.MyToken &&
+            targetPlayerId != gameCore.CurrentTurnPlayerId)
+        {
+            Debug.Log("본인 말만 선택 가능");
+            return;
+        }
+
+        if (selectedItemTargetType == ItemTargetType.EnemyToken &&
+            targetPlayerId == gameCore.CurrentTurnPlayerId)
+        {
+            Debug.Log("상대 말만 선택 가능");
+            return;
+        }
+
+        ExecuteItem(targetPlayerId, tokenId);
+    }
+
+    // 아이템 실행
+    private void ExecuteItem(string targetPlayerId, string targetTokenId)
+    {
+        var result = gameCore.UseItem(
+            gameCore.CurrentTurnPlayerId,
+            selectedItemId,
+            targetPlayerId,
+            targetTokenId
+        );
+
+        if (!result.IsSuccess)
+        {
+            Debug.Log(result.Error);
+            return;
+        }
+
+        selectedItemId = null;
+        isSelectingItemTarget = false;
+
+        RefreshItemUI();
+    }
+
+    // 타겟 플레이어 선택 (Coin Steal 아이템)
+    private void OnPlayerSelected(string playerId)
+    {
+        ExecuteItem(playerId, null);
+    }
+
+    // 자신 제외 플레이어 리스트
+    private List<Player> GetEnemyPlayers()
+    {
+        var list = new List<Player>();
+
+        foreach (var p in playersById.Values)
+        {
+            if (p.PlayerId != gameCore.CurrentTurnPlayerId)
+                list.Add(p);
+        }
+
+        return list;
     }
 
 }

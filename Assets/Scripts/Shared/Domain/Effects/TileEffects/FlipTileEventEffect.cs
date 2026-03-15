@@ -15,7 +15,7 @@ public class FlipTileEventEffect : ITileEffect
         {
             new TakeFromRichestEvent(), // 25
             new Coin10GiveOr5TakeEvent(), // 30
-            //new OneOnOneChallengeEvent() // 30
+            new OneOnOneChallengeEvent(), // 30
             new ReduceAllTwoThirdEvent(), // 10
             new EqualizeAllCoinsEvent(), // 5
         };

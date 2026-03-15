@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEngine.Rendering;
+using static YutSystem;
 
 public class GameCore
 {
@@ -8,7 +10,7 @@ public class GameCore
         WaitingForThrow,   // Roll 대기
         WaitingForTokenSelect, // Token 선택
         WaitingForStepSelect,   // Step 선택
-        WaitingForMerge // 업기 대기 상태
+        WaitingForMerge, // 업기 대기 상태
     }
 
     private Board board;
@@ -31,6 +33,7 @@ public class GameCore
 
     private GameState currentState;
     bool doubleMoveActive;
+    private int? forcedNextRoll = null;
 
     public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
     {
@@ -57,7 +60,11 @@ public class GameCore
     public Dictionary<string, Player> PlayersById => playersById;
     public string CurrentTurnPlayerId => turnManager.CurrentPlayerId;
     public Player CurrentPlayer => playersById[turnManager.CurrentPlayerId];
+    public string CurrentTurnPlaeyrName => CurrentPlayer.DisplayName;
+
     public bool CanSelectStep => currentState == GameState.WaitingForStepSelect;
+    public bool CanUseItem => currentState == GameState.WaitingForThrow;
+
     public void AddStep(int step)
     {
         pendingSteps.Add(step);
@@ -78,6 +85,12 @@ public class GameCore
         return board.GetTiles();
     }
 
+    // Roll 결과 강제 고정
+    public void ForceNextRoll(int step)
+    {
+        forcedNextRoll = step;
+    }
+
     // 윷 던지기
     public RollResult Roll(string playerId)
     {
@@ -90,8 +103,23 @@ public class GameCore
         if (!validation.IsSuccess)
             return validation;
 
-        var result = yutSystem.Roll();
-        int step = (int)result;
+        int step = 0;
+        YutResult result;
+
+        // 빽도 아이템
+        if (forcedNextRoll.HasValue)
+        {
+            step = forcedNextRoll.Value;
+            forcedNextRoll = null;
+
+            result = YutResult.BackDo; // 1회 사용
+        }
+        else
+        {
+            result = yutSystem.Roll();
+            step = (int)result;
+        }
+
 
         if (step < -1 || step >= 6)
             return RollResult.Fail(RollError.InvalidStep);
@@ -108,6 +136,8 @@ public class GameCore
 
         return RollResult.Success(step, turnManager.RemainingRolls > 0);
     }
+
+
 
     // 이동할 말 선택
     public bool SelectToken(string tokenId)
@@ -274,14 +304,35 @@ public class GameCore
     }
 
     // 아이템 사용
-    public void UseItem(Player player, Item item, Player targetPlayer, TokenGroup targetTokenGroup)
+    public ItemResult UseItem(string playerId, string itemId, string targetPlayerId, string targetTokenId)
     {
-        if (!ItemEffects.Effects.TryGetValue(item.Type, out var effect))
-            return;
+        if (playerId != CurrentTurnPlayerId)
+            return ItemResult.Fail(ItemError.NotYourTurn);
 
+        var player = playersById[playerId];
+        var item = player.GetItemById(itemId);
+
+        if (item == null)
+            return ItemResult.Fail(ItemError.InvalidItem);
+
+        if (!ItemEffects.Effects.TryGetValue(item.Type, out var effect))
+            return ItemResult.Fail(ItemError.InvalidItem);
+
+        Player targetPlayer = null;
+        TokenGroup targetTokenGroup = null;
+
+        if (targetPlayerId != null)
+            targetPlayer = playersById[targetPlayerId];
+
+        if(targetTokenId != null)
+            targetTokenGroup = board.GetTokenGroup(targetTokenId);
+
+        // 아이템 사용
         effect.Apply(this, player, targetPlayer, targetTokenGroup);
 
         player.RemoveItem(item);
+
+        return ItemResult.Success(playerId, item.Type);
     }
 
     // 잡기 x Move
@@ -291,4 +342,5 @@ public class GameCore
         tileEffectSystem.Execute(destination, player);
         return (destination, lapCount);
     }
+
 }
