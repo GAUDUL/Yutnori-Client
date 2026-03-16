@@ -9,8 +9,8 @@ public class RandomMapEventEffect : ITileEffect
         this.mapEventSystem = mapEventSystem;
     }
 
-    public void Execute(Player player, Tile tile)
+    public TileEffectResult Execute(Player player, Tile tile)
     {
-        mapEventSystem.Execute(tile.board, tile);
+        return mapEventSystem.Execute(tile.board, tile);
     }
 }

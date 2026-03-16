@@ -34,6 +34,7 @@ public class GameCore
     private GameState currentState;
     bool doubleMoveActive;
     private int? forcedNextRoll = null;
+    private MoveResult itemMoveResult;
 
     public GameCore(int boardSize, Dictionary<string, Player> playersById, List<Token> tokens)
     {
@@ -206,7 +207,7 @@ public class GameCore
         }
 
         // 타일 기믹 실행
-        tileEffectSystem.Execute(destination, CurrentPlayer);
+        var tileEffectResult = tileEffectSystem.Execute(destination, CurrentPlayer);
 
         // 말 잡기 처리
         bool captured = false;
@@ -243,12 +244,27 @@ public class GameCore
                 captured,
                 false,
                 true,
-                isTeleport
+                isTeleport,
+                tileEffectResult
             );
         }
 
         // 턴 확인
-        isRoundEnd = ResolveTurnFlow();
+        var (roundEnd, restoreResult) = ResolveTurnFlow();
+        isRoundEnd = roundEnd;
+
+        if (restoreResult != null)
+        {
+            if (tileEffectResult == null)
+                tileEffectResult = restoreResult;
+            else
+            {
+                var merged = new List<Tile>();
+                merged.AddRange(tileEffectResult.ChangedTiles);
+                merged.AddRange(restoreResult.ChangedTiles);
+                tileEffectResult = new TileEffectResult(merged.ToArray(), tileEffectResult.IsConnected);
+            }
+        }
 
         selectedTokenId = null;
 
@@ -260,8 +276,8 @@ public class GameCore
             captured, 
             isRoundEnd,
             needMerge,
-            isTeleport
-
+            isTeleport,
+            tileEffectResult
         );
     }
 
@@ -278,29 +294,36 @@ public class GameCore
         mergeCandidates = null;
         mergeTile = null;
 
-        bool isRoundEnd = ResolveTurnFlow();
+        var (isRoundEnd, restoreResult) = ResolveTurnFlow();
         return MergeResult.Success(CurrentTurnPlayerId, isRoundEnd);
     }
 
     // 현재 Turn State 설정 & 턴 확인
-    private bool ResolveTurnFlow()
+    private (bool isRoundEnd, TileEffectResult restoreResult) ResolveTurnFlow()
     {
         if (turnManager.RemainingRolls > 0)
         {
             currentState = GameState.WaitingForThrow;
-            return false;
+            return (false, null);
         }
 
         // 이동 횟수 남아있을 경우 말 선택 대기
         if (pendingSteps.Count > 0)
         {
             currentState = GameState.WaitingForTokenSelect;
-            return false;
+            return (false, null);
         }
 
         bool isRoundEnd = turnManager.EndTurn();
+
+        var restoredTiles = mapEventSystem.TickEvents(board);
+
         currentState = GameState.WaitingForThrow;
-        return isRoundEnd;
+
+        if (restoredTiles != null)
+            return (isRoundEnd, new TileEffectResult(restoredTiles, false));
+
+        return (isRoundEnd, null);
     }
 
     // 아이템 사용
@@ -327,19 +350,36 @@ public class GameCore
         if(targetTokenId != null)
             targetTokenGroup = board.GetTokenGroup(targetTokenId);
 
+        itemMoveResult = null;
+
         // 아이템 사용
         effect.Apply(this, player, targetPlayer, targetTokenGroup);
 
         player.RemoveItem(item);
 
-        return ItemResult.Success(playerId, item.Type);
+        return ItemResult.Success(playerId, item.Type, itemMoveResult);
     }
 
     // 잡기 x Move
     public (Tile tile, int lapCount) MoveTokenWithoutCapture(TokenGroup tokenGroup, int step, Player player)
     {
         var (destination, lapCount) = moveSystem.ExecuteMove(tokenGroup, step, player);
-        tileEffectSystem.Execute(destination, player);
+
+        var tileEffectResult = tileEffectSystem.Execute(destination, player);
+
+        itemMoveResult = MoveResult.Success(
+            tokenGroup.GroupId,
+            tokenGroup.GetTokenIds(),
+            tokenGroup.CurrentTileIndex,
+            CurrentTurnPlayerId,
+            false,
+            false,
+            false,
+            false,
+            tileEffectResult
+        );
+
+
         return (destination, lapCount);
     }
 

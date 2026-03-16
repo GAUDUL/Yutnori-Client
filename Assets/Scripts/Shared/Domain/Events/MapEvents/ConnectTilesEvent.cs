@@ -1,8 +1,10 @@
 // Ä­ ¿¬°á
 class ConnectTilesEvent : IMapEvent
 {
-    public void Execute(Board board, Tile triggerTile, MapEventSystem system)
+    public Tile[] Execute(Board board, Tile triggerTile, MapEventSystem system)
     {
+        Tile[] tiles = new Tile[2];
+
         int tileCount = board.TileCount;
         int index = triggerTile.tileIndex;
 
@@ -13,9 +15,14 @@ class ConnectTilesEvent : IMapEvent
         var rightTile = board.GetTile(right);
 
         if (leftTile.ConnectedTileIndex.HasValue || rightTile.ConnectedTileIndex.HasValue)
-            return;
+            return null;
 
         leftTile.ConnectedTileIndex = right;
         rightTile.ConnectedTileIndex = left;
+
+        tiles[0] = leftTile;
+        tiles[1] = rightTile;
+
+        return tiles;
     }
 }

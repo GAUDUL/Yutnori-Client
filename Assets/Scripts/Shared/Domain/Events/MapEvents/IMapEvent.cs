@@ -1,4 +1,4 @@
 public interface IMapEvent
 {
-    void Execute(Board board, Tile triggerTile, MapEventSystem system);
+    Tile[] Execute(Board board, Tile triggerTile, MapEventSystem system);
 }

@@ -1,4 +1,4 @@
 public interface ITileEffect
 {
-    void Execute( Player player, Tile tile);
+    TileEffectResult Execute(Player player, Tile tile);
 }

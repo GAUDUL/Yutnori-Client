@@ -18,13 +18,13 @@ public class Item
         switch (type)
         {
             case ItemType.BackDo:
-                return "빽도";
+                return "BackDo";
             case ItemType.StealCoin:
-                return "코인 뺏기";
+                return "StealCoin";
             case ItemType.DoubleMove:
-                return "x2 이동";
+                return "DoubleMove";
             case ItemType.MoveOtherToken:
-                return "말 이동시키기";
+                return "MoveOtherToken";
             default:
                 return "Unknown";
         }

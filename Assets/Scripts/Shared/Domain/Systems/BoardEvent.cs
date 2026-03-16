@@ -5,23 +5,31 @@ public class BoardEvent
     public List<int> ChangedTiles = new();
     public int RemainingTurns;
 
-    public void Tick(Board board)
+    public Tile[] Tick(Board board)
     {
         RemainingTurns--;
 
         if (RemainingTurns <= 0)
         {
-            Restore(board);
+            return Restore(board);
         }
+
+        return null;
     }
 
-    private void Restore(Board board)
+    private Tile[] Restore(Board board)
     {
+        List<Tile> tiles = new();
+
         foreach (var index in ChangedTiles)
         {
             Tile targetTile = board.GetTile(index);
             targetTile.Type = targetTile.OriginalType.Value;
             targetTile.OriginalType = null;
+
+            tiles.Add(targetTile);
         }
+
+        return tiles.ToArray();
     }
 }

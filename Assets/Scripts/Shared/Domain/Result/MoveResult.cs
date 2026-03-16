@@ -22,6 +22,7 @@ public class MoveResult
     public bool IsRoundEnd { get; }
     public bool NeedMerge { get; }
     public bool IsTeleport;
+    public TileEffectResult TileEffectResult { get; }
 
     public bool IsSuccess => Error == MoveError.None;
 
@@ -34,7 +35,8 @@ public class MoveResult
         bool captured = false,
         bool isRoundEnd = false,
         bool needMerge = false,
-        bool isTeleport = false)
+        bool isTeleport = false,
+        TileEffectResult tileEffectResult = null)
     {
         Error = error;
         GroupId = groupId;
@@ -45,6 +47,7 @@ public class MoveResult
         IsRoundEnd = isRoundEnd;
         NeedMerge = needMerge;
         IsTeleport = isTeleport;
+        TileEffectResult = tileEffectResult;
     }
 
     public static MoveResult Fail(MoveError error)
@@ -60,7 +63,8 @@ public class MoveResult
         bool captured,
         bool isRoundEnd,
         bool needMerge,
-        bool isTeleport = false)
+        bool isTeleport = false,
+        TileEffectResult tileEffectResult = null)
     {
         return new MoveResult(
             MoveError.None,
@@ -71,6 +75,7 @@ public class MoveResult
             captured,
             isRoundEnd,
             needMerge,
-            isTeleport);
+            isTeleport,
+            tileEffectResult);
     }
 }

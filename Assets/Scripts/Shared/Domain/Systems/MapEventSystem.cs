@@ -14,17 +14,20 @@ public class MapEventSystem
         this.turnManager = turnManager;
 
         events.Add(new MapEventEntry(new SwapGainLoseEvent(), 20));
-        events.Add(new MapEventEntry(new ConnectTilesEvent(), 40)); 
+        events.Add(new MapEventEntry(new ConnectTilesEvent(), 40)); // 연결 O
         events.Add(new MapEventEntry(new ReverseTileEvent(), 30));
         events.Add(new MapEventEntry(new AddFlipTilesEvent(), 10));
     }
 
     public int PlayerCount => turnManager.PlayerCount;
 
-    public void Execute(Board board, Tile triggerTile)
+    public TileEffectResult Execute(Board board, Tile triggerTile)
     {
         int roll = random.Next(0, 100);
         int sum = 0;
+
+        bool isConnected = false;
+        int cnt = 0;
 
         foreach (var entry in events)
         {
@@ -32,10 +35,18 @@ public class MapEventSystem
 
             if (roll < sum)
             {
-                entry.Event.Execute(board, triggerTile, this);
-                return;
+                if (cnt == 1)
+                    isConnected = true;
+
+                var changedTiles = entry.Event.Execute(board, triggerTile, this);
+
+                    return new TileEffectResult(changedTiles, isConnected);
             }
+
+            cnt++;
         }
+
+        return null;
     }
 
     public void AddBoardEvent(BoardEvent e)
@@ -44,16 +55,25 @@ public class MapEventSystem
     }
 
     // 턴 종료 시 호출
-    public void TickEvents(Board board)
+    public Tile[] TickEvents(Board board)
     {
+        List<Tile> changedTiles = new();
+
         for (int i = activeEvents.Count - 1; i >= 0; i--)
         {
-            activeEvents[i].Tick(board);
+            var tiles = activeEvents[i].Tick(board);
+
+            if (tiles != null)
+            {
+                changedTiles.AddRange(tiles);
+            }
 
             if (activeEvents[i].RemainingTurns <= 0)
             {
                 activeEvents.RemoveAt(i);
             }
         }
+
+        return changedTiles.Count > 0 ? changedTiles.ToArray() : null;
     }
 }

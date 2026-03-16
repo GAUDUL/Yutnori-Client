@@ -21,7 +21,7 @@ public class FlipTileEventEffect : ITileEffect
         };
     }
 
-    public void Execute(Player player, Tile tile)
+    public TileEffectResult Execute(Player player, Tile tile)
     {
         var allPlayers = gameCore.PlayersById.Values.ToList();
         int roll = random.Next(0, 100);
@@ -36,6 +36,8 @@ public class FlipTileEventEffect : ITileEffect
             flipEvents[3].Execute(player, allPlayers); // ReduceAllTwoThirdEvent
         else
             flipEvents[4].Execute(player, allPlayers); // EqualizeAllCoinsEvent
+
+        return null;
     }
 
 }

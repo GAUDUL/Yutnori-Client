@@ -68,7 +68,7 @@ public class GameManager : MonoBehaviour
 
         gameCore = new GameCore(BOARD_SIZE, playersById, tokens);
 
-        boardView.ApplyTile(gameCore.GetTiles());
+        boardView.ApplyAllTiles(gameCore.GetTiles());
 
 
         stepSelectionUI.Hide();
@@ -185,6 +185,20 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log(moveResult.Error);
             return;
+        }
+        
+        var tiles = moveResult.TileEffectResult?.ChangedTiles;
+
+        if (tiles != null)
+        {
+            if (moveResult.TileEffectResult?.IsConnected == true)
+            {
+                Debug.Log($"{tiles[0].tileIndex} & {tiles[1].tileIndex} 타일 연결");
+            }
+            else
+            {
+                boardView.ApplySomeTiles(moveResult.TileEffectResult.ChangedTiles);
+            }
         }
 
         UpdateTokenView(moveResult);
@@ -340,6 +354,11 @@ public class GameManager : MonoBehaviour
             targetPlayerId,
             targetTokenId
         );
+
+        if (result.MoveResult != null)
+        {
+            UpdateTokenView(result.MoveResult);
+        }
 
         if (!result.IsSuccess)
         {

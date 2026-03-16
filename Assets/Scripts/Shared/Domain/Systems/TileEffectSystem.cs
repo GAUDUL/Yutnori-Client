@@ -10,11 +10,13 @@ public class TileEffectSystem
         effects = TileEffects.Default(gameCore, mapEventSystem);
     }
 
-    public void Execute(Tile tile, Player player)
+    public TileEffectResult Execute(Tile tile, Player player)
     {
         if (effects.TryGetValue(tile.Type, out var effect))
         {
-            effect.Execute(player, tile);
+            return effect.Execute(player, tile);
         }
+
+        return null;
     }
 }

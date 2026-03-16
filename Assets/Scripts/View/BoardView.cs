@@ -7,11 +7,19 @@ public class BoardView : MonoBehaviour
     {
         return tileViews[index].transform.position;
     }
-    public void ApplyTile(Tile[] tiles)
+    public void ApplyAllTiles(Tile[] tiles)
     {
         for (int i = 0; i < tileViews.Length; i++)
         {
             tileViews[i].Apply(tiles[i]);
+        }
+    }
+
+    public void ApplySomeTiles(Tile[] tiles)
+    {
+        foreach (Tile tile in tiles)
+        {
+            tileViews[tile.tileIndex].Apply(tile);
         }
     }
 }

@@ -5,10 +5,12 @@ public class AddFlipTilesEvent : IMapEvent
 {
     private Random random = new Random();
 
-    public void Execute(Board board, Tile triggerTile, MapEventSystem system)
+    public Tile[] Execute(Board board, Tile triggerTile, MapEventSystem system)
     {
-        BoardEvent e = new BoardEvent();
-        e.RemainingTurns = system.PlayerCount;
+        Tile[] tiles = new Tile[3];
+
+        BoardEvent e = new BoardEvent() ;
+        e.RemainingTurns = system.PlayerCount + 1;
 
         int count = 0;
         int safety = 0; // 무한 루프 방지용
@@ -27,6 +29,8 @@ public class AddFlipTilesEvent : IMapEvent
             tile.OriginalType = tile.Type;
             tile.Type = Tile.TileType.Flip;
 
+            tiles[count] = tile;
+
             e.ChangedTiles.Add(index);
 
             count++;
@@ -34,5 +38,7 @@ public class AddFlipTilesEvent : IMapEvent
 
         if (e.ChangedTiles.Count > 0)
             system.AddBoardEvent(e);
+
+        return tiles;
     }
 }
